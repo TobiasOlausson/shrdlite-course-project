@@ -55,19 +55,104 @@ function aStarSearch<Node> (
     heuristics : (n:Node) => number,
     timeout : number
 ) : SearchResult<Node> {
-    // A dummy search result: it just picks the first possible neighbour
+    var pQueue = new collections.PriorityQueue<SearchResult<Node>>(
+      function(Object1, Object2){
+        return (Object2.cost + heuristics(Object2.path[Object2.path.length-1])) -
+                (Object1.cost + heuristics(Object1.path[Object1.path.length-1]))
+    });
     var result : SearchResult<Node> = {
         path: [start],
         cost: 0
     };
-    while (result.path.length < 3) {
-        var edge : Edge<Node> = graph.outgoingEdges(start) [0];
-        if (! edge) break;
-        start = edge.to;
-        result.path.push(start);
-        result.cost += edge.cost;
+
+    //Used to check for timeout (timeout : number)
+    var date = new Date();
+    var startTime : number = date.getTime();
+
+    //Initial queue edges
+    var startEdges : Edge<Node>[] = graph.outgoingEdges(start);
+    for (var i = 0; i < startEdges.length; i++){
+      var tmp2 : SearchResult<Node> = {
+          path: [start],
+          cost: 0
+      };
+
+      tmp2.cost += startEdges[i].cost;
+      tmp2.path.push(startEdges[i].to);
+      pQueue.enqueue(tmp2);
+    }
+
+    //Used to store the node with the lowest f value
+    var closedSetNode : Node[] = [start];
+    var closedSetCost : number[] = [0];
+
+    //Iteration
+    while (!pQueue.isEmpty()) {
+      // Check for timeout
+      if(date.getTime() - startTime > (timeout*1000)){
+          return result;
+        }
+
+      var s : SearchResult<Node> = pQueue.dequeue();
+        
+      if (goal(s.path[s.path.length-1])) {  
+        return s;
+      }
+
+        //Add neighbouring edges to queue
+      var adjEdges : Edge<Node>[] = 
+        graph.outgoingEdges(s.path[s.path.length-1]);
+
+      for (var i = 0; i < adjEdges.length; i++){
+
+        // check to see if already in path
+        var inPath : boolean = false;
+        for(var j = 0; j < s.path.length; j++){
+          if(graph.compareNodes(adjEdges[i].to, s.path[j]) == 0){
+            inPath = true;
+            break;
+          }
+        }
+        // If node found in closed set with lower f value, do not add
+        var closed : boolean = false;
+        for(var k = 0; k < closedSetNode.length; k++){
+          if(graph.compareNodes(closedSetNode[k], adjEdges[i].from) == 0){
+            if(closedSetCost[k] < (s.cost + adjEdges[i].cost + heuristics(adjEdges[i].to))){
+              closed = true;
+              break;
+            }
+          }
+        }
+
+        // if not in path, add to path and add to queue
+        if(!inPath && !closed){
+          var tmp3 : SearchResult<Node> = newTemp(s);
+          tmp3.cost += adjEdges[i].cost;
+          tmp3.path = tmp3.path;
+          tmp3.path.push(adjEdges[i].to);
+          pQueue.enqueue(tmp3);
+        }
+
+      }
+      // Add node to closed set
+      closedSetNode.push(s.path[s.path.length-1]);
+      closedSetCost.push(s.cost + heuristics(s.path[s.path.length-1]));
     }
     return result;
 }
 
 
+function newTemp<Node>(s1:SearchResult<Node>) : SearchResult<Node> {
+  var nodes: Node[] = [];
+
+  for(var q = 0; q < s1.path.length; q++) {
+    nodes.push(s1.path[q]);
+  }
+
+  var newT: SearchResult<Node> = {
+    path: nodes,
+    cost: s1.cost
+  };
+
+  return newT;
+}
