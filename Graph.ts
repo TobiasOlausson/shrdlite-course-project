@@ -66,9 +66,8 @@ function aStarSearch<Node> (
     };
 
     //Used to check for timeout (timeout : number)
-    var date = new Date();
-    var startTime : number = date.getTime();
-
+    var startTime : number = Date.now();
+    
     //Initial queue edges
     var startEdges : Edge<Node>[] = graph.outgoingEdges(start);
     for (var i = 0; i < startEdges.length; i++){
@@ -89,13 +88,13 @@ function aStarSearch<Node> (
     //Iteration
     while (!pQueue.isEmpty()) {
       // Check for timeout
-      if(date.getTime() - startTime > (timeout*1000)){
-          return result;
-        }
+      if(Date.now() - startTime >= (timeout*1000)){
+        return result;
+      }
 
       var s : SearchResult<Node> = pQueue.dequeue();
-        
-      if (goal(s.path[s.path.length-1])) {  
+      
+      if (goal(s.path[s.path.length-1])) {
         return s;
       }
 
