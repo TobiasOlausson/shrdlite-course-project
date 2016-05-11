@@ -1,5 +1,6 @@
 ///<reference path="World.ts"/>
 ///<reference path="Parser.ts"/>
+///<reference path="lib/collections.ts"/>
 
 /**
 * Interpreter module
@@ -105,17 +106,50 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
      * @param state The current state of the world. Useful to look up objects in the world.
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
      */
+    
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
-        // This returns a dummy interpretation involving two random objects in the world
-        var objects : string[] = Array.prototype.concat.apply([], state.stacks);
-        var a : string = objects[Math.floor(Math.random() * objects.length)];
-        var b : string = objects[Math.floor(Math.random() * objects.length)];
-        var interpretation : DNFFormula = [[
-            {polarity: true, relation: "ontop", args: [a, "floor"]},
-            {polarity: true, relation: "holding", args: [b]}
-        ]];
+	/*console.log("Command: " + cmd.command + " Entity: " + cmd.entity + " loc: " + cmd.location);
+	console.log("Entity relation: " + cmd.entity.object.location.relation + " Entity entity: " +
+		    cmd.entity.object.location.entity.object.color);
+	console.log("Obj obj: " + cmd.entity.object.object.color);*/
+
+	var leaf : Parser.Object = solve(cmd.entity.object);
+	console.log("Leaf: " + leaf.color);
+	
+	var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
+	var objects = state.objects;
+	
+        var interpretation : DNFFormula = [];
+	
+	objectStrings.forEach((objStr) => {
+	    var objDef = objects[objStr];
+	    
+	    if(fitsDescription(objDef, cmd.entity.object.color, cmd.entity.object.size, cmd.entity.object.form)) {
+		interpretation.push([{polarity: true, relation: "holding", args: [objStr]}]);
+	    }
+	});
+	
         return interpretation;
     }
 
+    function solve(obj : Parser.Object) : Object {
+	if(obj.location == null) {
+	    return obj;
+	} else {
+	    return solve(obj.object);
+	}
+    }
+
+//    function locRelStuff(location : 
+    
+    function fitsDescription(objectDef : ObjectDefinition, color : string, size : string, form : string): boolean {
+	/*console.log("ObjectDef: " + objectDef.color + " " + objectDef.size + " " + objectDef.form);
+	console.log("Values: " + color + " " + size + " " + form);
+	console.log("--------------------------------------");*/
+	
+	return (objectDef.form == form || form == "anyform") &&
+	    (objectDef.size == size || size == null) &&
+	    (objectDef.color == color || color == null);
+    }
 }
 
