@@ -2644,38 +2644,231 @@ var Interpreter;
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
      */
     function interpretCommand(cmd, state) {
-        /*console.log("Command: " + cmd.command + " Entity: " + cmd.entity + " loc: " + cmd.location);
-        console.log("Entity relation: " + cmd.entity.object.location.relation + " Entity entity: " +
-                cmd.entity.object.location.entity.object.color);
-        console.log("Obj obj: " + cmd.entity.object.object.color);*/
-        var leaf = findLeaf(cmd.entity.object);
-        console.log("Leaf: " + leaf.color);
+        var interpretations = [];
+        switch (cmd.command) {
+            case "take":
+                getTakeObjects(cmd.entity, state).forEach(function (objStr) {
+                    interpretations.push([{ polarity: true, relation: "holding", args: [objStr] }]);
+                });
+                break;
+            case "move":
+                // interpretations.concat(getMoveInterpretations(cmd.entity, state));
+                break;
+            case "put":
+                if (state.holding == null)
+                    break;
+                break;
+            default:
+                break;
+        }
+        return interpretations;
+    }
+    function getTakeObjects(entity, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
-        var interpretation = [];
+        var result = [];
+        var subjects = [];
         objectStrings.forEach(function (objStr) {
             var objDef = objects[objStr];
-            if (fitsDescription(objDef, cmd.entity.object.color, cmd.entity.object.size, cmd.entity.object.form)) {
-                interpretation.push([{ polarity: true, relation: "holding", args: [objStr] }]);
+            if (fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
+                subjects.push(objStr);
             }
         });
-        return interpretation;
-    }
-    function findLeaf(obj) {
-        if (obj.location == null) {
-            return obj;
+        if (entity.object.location == null) {
+            return subjects;
         }
         else {
-            return findLeaf(obj.object);
+            var validObjects = [];
+            objectStrings.forEach(function (objStr) {
+                var objDef = objects[objStr];
+                if (fitsDescription(objDef, entity.object.object.color, entity.object.object.size, entity.object.object.form)) {
+                    validObjects.push(objStr);
+                }
+            });
+            validObjects.forEach(function (objStr) {
+                if (isValidTakeObject(objects[objStr], entity.object, state))
+                    result.push(objStr);
+            });
+            return result;
         }
     }
+    function isValidTakeObject(mainObj, obj, state) {
+        if (obj.location == null)
+            return true;
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        var validObjects = [];
+        objectStrings.forEach(function (objStr) {
+            var objDef = objects[objStr];
+            if (fitsDescription(objDef, obj.location.entity.object.color, obj.location.entity.object.size, obj.location.entity.object.form)) {
+                if (constraintsTake(mainObj, objDef, obj.location.relation, state)) {
+                    validObjects.push(objStr);
+                }
+            }
+        });
+        //not sure if it works properly...
+        var isValid = true;
+        validObjects.forEach(function (x) {
+            isValid = isValid && isValidTakeObject(objects[x], obj.location.entity.object, state);
+        });
+        return validObjects.length != 0 && isValid;
+    }
+    function constraintsTake(obj1, obj2, relation, state) {
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        if (obj1 == obj2) {
+            return false;
+        }
+        if (obj1 == "floor")
+            return false;
+        var indexX = -2;
+        var sndIndexX = -2;
+        var indexY = -2;
+        var sndIndexY = -2;
+        for (var x = 0; x < state.stacks.length; x++) {
+            for (var y = 0; y < state.stacks[x].length; y++) {
+                if (objects[state.stacks[x][y]] == obj2) {
+                    sndIndexX = x;
+                    sndIndexY = y;
+                }
+                if (objects[state.stacks[x][y]] == obj1) {
+                    indexX = x;
+                    indexY = y;
+                }
+            }
+        }
+        // meh, fix relations...
+        if (relation == "inside") {
+        }
+        if (relation == "ontop") {
+            return false;
+        }
+        if (relation == "above") {
+            return true;
+        }
+        if (relation == "beside")
+            return indexX == sndIndexX + 1 || indexX == sndIndexX - 1;
+        if (relation == "leftof")
+            return indexX == sndIndexX - 1;
+        if (relation == "rightof")
+            return indexX == sndIndexX + 1;
+        return false;
+    }
     function fitsDescription(objectDef, color, size, form) {
-        /*console.log("ObjectDef: " + objectDef.color + " " + objectDef.size + " " + objectDef.form);
-        console.log("Values: " + color + " " + size + " " + form);
-        console.log("--------------------------------------");*/
         return (objectDef.form == form || form == "anyform") &&
             (objectDef.size == size || size == null) &&
             (objectDef.color == color || color == null);
+    }
+    // old stuff...
+    function solve(obj, objStr, loc, state) {
+        var result = [];
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        switch (loc.relation) {
+            case "inside":
+            case "ontop":
+                var list = getValidObjects(obj, loc.entity.object, state, loc.relation);
+                if (list.length == 0) {
+                    break;
+                }
+                list.forEach(function (listItem) {
+                    if (solveRest(loc.entity.object, loc.entity.object.location, state)) {
+                        result.push([{ polarity: true, relation: loc.relation, args: [objStr, listItem] }]);
+                    }
+                });
+                break;
+            case "above":
+                var list = getValidObjects(obj, loc.entity.object, state, "above");
+                if (list.length == 0) {
+                    break;
+                }
+                list.forEach(function (listItem) {
+                    if (solveRest(loc.entity.object, loc.entity.object.location, state)) {
+                        result.push([{ polarity: true, relation: "above", args: [objStr, listItem] }]);
+                    }
+                });
+                break;
+            case "leftof":
+            case "rightof":
+            case "beside":
+                var list = getValidObjects(obj, loc.entity.object, state, loc.relation);
+                if (list.length == 0) {
+                    break;
+                }
+                list.forEach(function (listItem) {
+                    if (solveRest(loc.entity.object, loc.entity.object.location, state)) {
+                        result.push([{ polarity: true, relation: loc.relation, args: [objStr, listItem] }]);
+                    }
+                });
+                break;
+            case "under":
+                break;
+            default:
+                break;
+        }
+        if (result.length == 0)
+            return null;
+        return result;
+    }
+    function solveRest(obj, loc, state) {
+        if (loc == null || obj == null)
+            return true;
+        var list = getValidObjects(obj, loc, state, loc.relation);
+        return list.length != 0 && solveRest(loc.entity.object, loc.entity.object.location, state);
+    }
+    function getValidObjects(obj, target, state, relation) {
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        var validObjects = [];
+        objectStrings.forEach(function (objStr) {
+            var objDef = objects[objStr];
+            if (fitsDescription(objDef, target.color, target.size, target.form)) {
+                if (constraints(obj, objDef, relation, state)) {
+                    validObjects.push(objStr);
+                }
+            }
+        });
+        return validObjects;
+    }
+    function constraints(obj1, obj2, relation, state) {
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        if (obj1 == obj2) {
+            return false;
+        }
+        if (obj1 == "floor")
+            return false;
+        if (relation == "inside") {
+            if (!(obj1.form == "ball" && obj2.form == "box"))
+                return false;
+            if (obj1.size == "large")
+                return obj2.size == "large";
+            return true;
+        }
+        if (relation == "ontop") {
+            if (obj1.form == "ball" && obj2.form == "floor")
+                return true;
+            if (obj1.form == "box" && obj2.form == "table")
+                return true;
+            return false;
+        }
+        if (relation == "above") {
+            if (obj2.form == "ball")
+                return false;
+            // if(obj1.form == "box" && obj2.form == "ball") return true;
+            // if(obj1.form == "table" && obj2.form == "ball") return true;
+            return true;
+        }
+        if (relation == "leftof") {
+            return true;
+        }
+        if (relation == "rightof") {
+            return true;
+        }
+        if (relation == "beside") {
+            return true;
+        }
+        return false;
     }
 })(Interpreter || (Interpreter = {}));
 ///<reference path="World.ts"/>
