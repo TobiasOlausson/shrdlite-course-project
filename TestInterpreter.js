@@ -2646,7 +2646,7 @@ var Interpreter;
                 });
                 break;
             case "move":
-                interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
+                // interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
                 break;
             case "put":
                 if (state.holding == null)
@@ -2657,32 +2657,17 @@ var Interpreter;
         }
         return interpretations;
     }
-    function getMoveInterpretations(entity, loc, state) {
-        var objectStrings = Array.prototype.concat.apply([], state.stacks);
-        var objects = state.objects;
-        var result = [];
-        var subjects = [];
-        objectStrings.forEach(function (objStr) {
-            var objDef = objects[objStr];
-            if (fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
-                subjects.push(objStr);
-            }
-        });
-        return result;
-    }
     function getTakeObjects(entity, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
         var result = [];
-        var subjects = [];
-        objectStrings.forEach(function (objStr) {
-            var objDef = objects[objStr];
-            if (fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
-                subjects.push(objStr);
-            }
-        });
         if (entity.object.location == null) {
-            return subjects;
+            objectStrings.forEach(function (objStr) {
+                var objDef = objects[objStr];
+                if (fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
+                    result.push(objStr);
+                }
+            });
         }
         else {
             var validObjects = [];
@@ -2696,8 +2681,8 @@ var Interpreter;
                 if (isValidTakeObject(objects[objStr], entity.object, state))
                     result.push(objStr);
             });
-            return result;
         }
+        return result;
     }
     function isValidTakeObject(mainObj, obj, state) {
         if (obj.location == null)

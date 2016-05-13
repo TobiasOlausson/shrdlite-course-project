@@ -111,7 +111,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 });
                 break;
             case "move":
-                interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
+                // interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
                 break;
             case "put":
                 if(state.holding == null)
