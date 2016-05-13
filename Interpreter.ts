@@ -96,12 +96,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     //////////////////////////////////////////////////////////////////////
     // private functions
     /**
-     * The core interpretation function. The code here is just a
-     * template; you should rewrite this function entirely. In this
-     * template, the code produces a dummy interpretation which is not
-     * connected to `cmd`, but your version of the function should
-     * analyse cmd in order to figure out what interpretation to
-     * return.
      * @param cmd The actual command. Note that it is *not* a string, but rather an object of type `Command` (as it has been parsed by the parser).
      * @param state The current state of the world. Useful to look up objects in the world.
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
@@ -179,21 +173,17 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             
             if(fitsDescription(objDef, obj.location.entity.object.color, obj.location.entity.object.size, 
                 obj.location.entity.object.form)) {
-                if(constraintsTake(mainObj, objDef, obj.location.relation, state)){
+                if(relationCheck(mainObj, objDef, obj.location.relation, state)){
                     validObjects.push(objStr);
                 }
             }
         });
 
-        //not sure if it works properly...
-        var isValid : boolean = true;
-        validObjects.forEach((x) => {
-            isValid = isValid && isValidTakeObject(objects[x], obj.location.entity.object, state);
-        });
-        return validObjects.length != 0 && isValid;
+        //only works for one step...
+        return validObjects.length != 0;
     }
 
-    function constraintsTake (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
+    function relationCheck (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
 
@@ -219,28 +209,16 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 }
             }
         }
-        // meh, fix relations...
         if(relation == "inside"){
-            // if(indexX == sndIndexX && indexY == sndIndexY + 1){
-            //     if(!(obj2.form == "box" && (obj1.form == "ball" || obj1.form == "box")))
-            //         return true;
-            //     if(obj1.size == "large" && obj2.size == "large")
-            //         return true;
-            //     return true;
-            // } else {
-            //     return false;
-            // }
+            return constraints(obj1, obj2, "inside", state) && indexX == sndIndexX && 
+                indexY == sndIndexY + 1;
         }
-        if(relation == "ontop"){
-            return false;
-        }
-        if(relation == "above"){
-            return true;
-        }
+        if(relation == "ontop") return indexX == sndIndexX && indexY == sndIndexY - 1;
+        if(relation == "above") return indexX == sndIndexX && indexY < sndIndexY;
 
-        if(relation == "beside") return indexX == sndIndexX + 1 || indexX == sndIndexX -1;
-        if(relation == "leftof") return indexX == sndIndexX -1;
-        if(relation == "rightof") return indexX == sndIndexX +1;
+        if(relation == "beside") return indexX == sndIndexX + 1 || indexX == sndIndexX - 1;
+        if(relation == "leftof") return indexX == sndIndexX - 1;
+        if(relation == "rightof") return indexX == sndIndexX + 1;
         
         return false;
     }
@@ -250,95 +228,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             (objectDef.size == size || size == null) &&
             (objectDef.color == color || color == null);
     }
-
-
-
-    // old stuff...
-
-
-
-
-    function solve(obj : Parser.Object, objStr : string, loc : Parser.Location, state : WorldState) : DNFFormula {
-        var result : DNFFormula = [];
-
-        var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
-        var objects = state.objects;
-
-        switch(loc.relation) {
-            case "inside":
-            case "ontop":
-                var list : string[] = getValidObjects(obj, loc.entity.object, state, loc.relation);
-                if(list.length == 0){
-                    break;
-                }
-
-                list.forEach((listItem) => {
-                    if(solveRest(loc.entity.object, loc.entity.object.location, state)){
-                        result.push([{polarity: true, relation: loc.relation, args: [objStr, listItem]}]);
-                    }
-                }); 
-
-                break;
-            case "above":
-                var list : string[] = getValidObjects(obj, loc.entity.object, state, "above");
-                if(list.length == 0){
-                    break;
-                }
-
-                list.forEach((listItem) => {
-                    if(solveRest(loc.entity.object, loc.entity.object.location, state)){
-                        result.push([{polarity: true, relation: "above", args: [objStr, listItem]}]);
-                    }
-                });
-                break;
-            case "leftof":
-            case "rightof":
-            case "beside":
-                var list : string[] = getValidObjects(obj, loc.entity.object, state, loc.relation);
-                if(list.length == 0){
-                    break;
-                }
-
-                list.forEach((listItem) => {
-                    if(solveRest(loc.entity.object, loc.entity.object.location, state)){
-                        result.push([{polarity: true, relation: loc.relation, args: [objStr, listItem]}]);
-                    }
-                });
-                break;
-            case "under":
-                break;
-            default:
-                break;
-        }
-        if(result.length == 0) return null;
-        return result;
-    }
-
-    function solveRest(obj : Parser.Object, loc : Parser.Location, state : WorldState) : boolean {
-        if(loc == null || obj == null) return true;
-        var list : string[] = getValidObjects(obj, loc, state, loc.relation);
-        return list.length != 0 && solveRest(loc.entity.object, loc.entity.object.location, state);
-    }
-
-    function getValidObjects(obj : Parser.Object, target : Parser.Object, state : WorldState, relation : string) : string[] {
-
-        var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
-        var objects = state.objects;
-
-        var validObjects : string[] = [];
-        objectStrings.forEach((objStr) => {
-            var objDef = objects[objStr];
-            
-            if(fitsDescription(objDef, target.color, target.size, target.form)) {
-                if(constraints(obj, objDef, relation, state)){
-                    validObjects.push(objStr);
-                }
-            }
-        });
-
-        return validObjects;
-    }
-
 
     function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
@@ -350,7 +239,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if(obj1 == "floor") return false;
 
         if(relation == "inside"){
-            if(!(obj1.form == "ball" && obj2.form == "box")) return false;
+            if(!((obj1.form == "ball" || obj1.form == "box") && obj2.form == "box")) return false;
             if(obj1.size == "large") return obj2.size == "large";
             return true;
         }
@@ -361,8 +250,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         }
         if(relation == "above"){
             if(obj2.form == "ball") return false;
-            // if(obj1.form == "box" && obj2.form == "ball") return true;
-            // if(obj1.form == "table" && obj2.form == "ball") return true;
             return true;
         }
         if(relation == "leftof"){
@@ -376,26 +263,4 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         }
         return false;
     }
-
-    // function getValidTakeObjects(obj : Parser.Object, state : WorldState, relation : string) : string[] {
-    //     var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
-    //     var objects = state.objects;
-
-    //     var validObjects : string[] = [];
-    //     objectStrings.forEach((objStr) => {
-    //         var objDef = objects[objStr];
-            
-    //         if(fitsDescription(objDef, obj.object.color, obj.object.size, obj.object.form)) {
-    //             // console.log("objDef: " + objDef.color + " " + objDef.size + " " + objDef.form);
-    //             // console.log("target: " + target.color + " " + target.size + " " + target.form);
-    //             if(constraintsTake(obj.object, objDef, object.location.relation, state)){
-    //                 validObjects.push(objStr);
-    //             }
-    //         }
-    //     });
-
-    //     return validObjects;
-    // }
-
-
 }

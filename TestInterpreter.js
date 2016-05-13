@@ -2633,12 +2633,6 @@ var Interpreter;
     //////////////////////////////////////////////////////////////////////
     // private functions
     /**
-     * The core interpretation function. The code here is just a
-     * template; you should rewrite this function entirely. In this
-     * template, the code produces a dummy interpretation which is not
-     * connected to `cmd`, but your version of the function should
-     * analyse cmd in order to figure out what interpretation to
-     * return.
      * @param cmd The actual command. Note that it is *not* a string, but rather an object of type `Command` (as it has been parsed by the parser).
      * @param state The current state of the world. Useful to look up objects in the world.
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
@@ -2701,19 +2695,15 @@ var Interpreter;
         objectStrings.forEach(function (objStr) {
             var objDef = objects[objStr];
             if (fitsDescription(objDef, obj.location.entity.object.color, obj.location.entity.object.size, obj.location.entity.object.form)) {
-                if (constraintsTake(mainObj, objDef, obj.location.relation, state)) {
+                if (relationCheck(mainObj, objDef, obj.location.relation, state)) {
                     validObjects.push(objStr);
                 }
             }
         });
-        //not sure if it works properly...
-        var isValid = true;
-        validObjects.forEach(function (x) {
-            isValid = isValid && isValidTakeObject(objects[x], obj.location.entity.object, state);
-        });
-        return validObjects.length != 0 && isValid;
+        //only works for one step...
+        return validObjects.length != 0;
     }
-    function constraintsTake(obj1, obj2, relation, state) {
+    function relationCheck(obj1, obj2, relation, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
         if (obj1 == obj2) {
@@ -2737,15 +2727,14 @@ var Interpreter;
                 }
             }
         }
-        // meh, fix relations...
         if (relation == "inside") {
+            return constraints(obj1, obj2, "inside", state) && indexX == sndIndexX &&
+                indexY == sndIndexY + 1;
         }
-        if (relation == "ontop") {
-            return false;
-        }
-        if (relation == "above") {
-            return true;
-        }
+        if (relation == "ontop")
+            return indexX == sndIndexX && indexY == sndIndexY - 1;
+        if (relation == "above")
+            return indexX == sndIndexX && indexY < sndIndexY;
         if (relation == "beside")
             return indexX == sndIndexX + 1 || indexX == sndIndexX - 1;
         if (relation == "leftof")
@@ -2759,77 +2748,6 @@ var Interpreter;
             (objectDef.size == size || size == null) &&
             (objectDef.color == color || color == null);
     }
-    // old stuff...
-    function solve(obj, objStr, loc, state) {
-        var result = [];
-        var objectStrings = Array.prototype.concat.apply([], state.stacks);
-        var objects = state.objects;
-        switch (loc.relation) {
-            case "inside":
-            case "ontop":
-                var list = getValidObjects(obj, loc.entity.object, state, loc.relation);
-                if (list.length == 0) {
-                    break;
-                }
-                list.forEach(function (listItem) {
-                    if (solveRest(loc.entity.object, loc.entity.object.location, state)) {
-                        result.push([{ polarity: true, relation: loc.relation, args: [objStr, listItem] }]);
-                    }
-                });
-                break;
-            case "above":
-                var list = getValidObjects(obj, loc.entity.object, state, "above");
-                if (list.length == 0) {
-                    break;
-                }
-                list.forEach(function (listItem) {
-                    if (solveRest(loc.entity.object, loc.entity.object.location, state)) {
-                        result.push([{ polarity: true, relation: "above", args: [objStr, listItem] }]);
-                    }
-                });
-                break;
-            case "leftof":
-            case "rightof":
-            case "beside":
-                var list = getValidObjects(obj, loc.entity.object, state, loc.relation);
-                if (list.length == 0) {
-                    break;
-                }
-                list.forEach(function (listItem) {
-                    if (solveRest(loc.entity.object, loc.entity.object.location, state)) {
-                        result.push([{ polarity: true, relation: loc.relation, args: [objStr, listItem] }]);
-                    }
-                });
-                break;
-            case "under":
-                break;
-            default:
-                break;
-        }
-        if (result.length == 0)
-            return null;
-        return result;
-    }
-    function solveRest(obj, loc, state) {
-        if (loc == null || obj == null)
-            return true;
-        var list = getValidObjects(obj, loc, state, loc.relation);
-        return list.length != 0 && solveRest(loc.entity.object, loc.entity.object.location, state);
-    }
-    function getValidObjects(obj, target, state, relation) {
-        var objectStrings = Array.prototype.concat.apply([], state.stacks);
-        var objects = state.objects;
-        var validObjects = [];
-        objectStrings.forEach(function (objStr) {
-            var objDef = objects[objStr];
-            if (fitsDescription(objDef, target.color, target.size, target.form)) {
-                if (constraints(obj, objDef, relation, state)) {
-                    validObjects.push(objStr);
-                }
-            }
-        });
-        return validObjects;
-    }
     function constraints(obj1, obj2, relation, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
@@ -2839,7 +2757,7 @@ var Interpreter;
         if (obj1 == "floor")
             return false;
         if (relation == "inside") {
-            if (!(obj1.form == "ball" && obj2.form == "box"))
+            if (!((obj1.form == "ball" || obj1.form == "box") && obj2.form == "box"))
                 return false;
             if (obj1.size == "large")
                 return obj2.size == "large";
