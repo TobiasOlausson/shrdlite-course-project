@@ -131,8 +131,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
         var result : string[] = [];
 
-        if(entity.object.location == null){
-            objectStrings.forEach((objStr) => {
+        if(entity.object.location == null){ // The entity has no object referance
+            objectStrings.forEach((objStr) => {  // Find all objects matching the description
                 var objDef = objects[objStr];
 
                 if(fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
@@ -140,9 +140,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 }
             });
 
-        } else {            
+        } else { // The entity has an object referance    
             var validObjects : string[] = [];
-            objectStrings.forEach((objStr) => {
+            objectStrings.forEach((objStr) => { //Find all objects matching the description of the primary object
                 var objDef = objects[objStr];
                 
                 if(fitsDescription(objDef, entity.object.object.color, 
@@ -150,7 +150,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                     validObjects.push(objStr);
                 }
             });
-            validObjects.forEach((objStr) => {
+            validObjects.forEach((objStr) => { // Add all objects that have valid location and relation
                 if(isValidTakeObject(objects[objStr], entity.object, state))
                     result.push(objStr);
             });
