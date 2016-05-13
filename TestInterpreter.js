@@ -2646,7 +2646,7 @@ var Interpreter;
                 });
                 break;
             case "move":
-                // interpretations.concat(getMoveInterpretations(cmd.entity, state));
+                interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
                 break;
             case "put":
                 if (state.holding == null)
@@ -2656,6 +2656,19 @@ var Interpreter;
                 break;
         }
         return interpretations;
+    }
+    function getMoveInterpretations(entity, loc, state) {
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        var result = [];
+        var subjects = [];
+        objectStrings.forEach(function (objStr) {
+            var objDef = objects[objStr];
+            if (fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
+                subjects.push(objStr);
+            }
+        });
+        return result;
     }
     function getTakeObjects(entity, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
@@ -2700,7 +2713,6 @@ var Interpreter;
                 }
             }
         });
-        //only works for one step...
         return validObjects.length != 0;
     }
     function relationCheck(obj1, obj2, relation, state) {
@@ -2773,8 +2785,6 @@ var Interpreter;
         if (relation == "above") {
             if (obj2.form == "ball")
                 return false;
-            // if(obj1.form == "box" && obj2.form == "ball") return true;
-            // if(obj1.form == "table" && obj2.form == "ball") return true;
             return true;
         }
         if (relation == "leftof") {
