@@ -130,18 +130,16 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         var objects = state.objects;
 
         var result : string[] = [];
-        var subjects : string[] = [];
-
-        objectStrings.forEach((objStr) => {
-            var objDef = objects[objStr];
-
-            if(fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
-                subjects.push(objStr);
-            }
-        });
 
         if(entity.object.location == null){
-            return subjects;
+            objectStrings.forEach((objStr) => {
+                var objDef = objects[objStr];
+
+                if(fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
+                    result.push(objStr);
+                }
+            });
+
         } else {            
             var validObjects : string[] = [];
             objectStrings.forEach((objStr) => {
@@ -156,8 +154,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 if(isValidTakeObject(objects[objStr], entity.object, state))
                     result.push(objStr);
             });
-            return result;
         }
+        return result;
     }
 
     function isValidTakeObject(mainObj : Parser.Object, obj : Parser.Object, state : WorldState) : boolean {
