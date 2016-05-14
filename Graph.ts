@@ -97,6 +97,7 @@ function aStarSearch<Node> (
       while(true){
         for(var n = 0; n < closedSetNode.length; n++){
           if(graph.compareNodes(closedSetNode[n].current, next.parent) == 0){
+
             next = closedSetNode[n];
             result.path.unshift(next.current);
             if(next.parent == undefined)
@@ -138,11 +139,9 @@ function aStarSearch<Node> (
           cost: first.cost + adjEdges[i].cost
         };
         pQueue.enqueue(tmp2);
+        closedSetNode.push(tmp2);
       }
     }
-
-  // Add node to closed set
-  closedSetNode.push(first);
   }
 
   // no path was found, return empty result
