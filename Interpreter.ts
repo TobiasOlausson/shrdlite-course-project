@@ -116,12 +116,11 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             case "put":
                 if(state.holding == null)
                     break;
-
                 break;
             default:
                 break;
             }
-        if(interpretations.length == 0) return null;
+        if(interpretations[0] == null) return null;
         return interpretations;
     }
 
@@ -139,27 +138,50 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 result.push([{polarity: true, relation: loc.relation, args: [subject, target]}]);
             });
         });
-
         return result;
     }
 
-    function getSubjects(object : Parser.Object, state : WorldState) : string[] {
+    function getSubjects(obj : Parser.Object, state : WorldState) : string[] {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
 
         var result : string[] = [];
-        if(object.location == null){
+        if(obj.location == null){
             objectStrings.forEach((objStr) => {
                 var objDef = objects[objStr];
 
-                if(fitsDescription(objDef, object.color, object.size, object.form)) {
+                if(fitsDescription(objDef, obj.color, obj.size, obj.form)) {
                     result.push(objStr);
                 }
             });
+        } else {
+            var validObjects : string[] = [];
+            objectStrings.forEach((objStr) => {
+                var objDef = objects[objStr];
+                
+                if(fitsDescription(objDef, obj.object.color, obj.object.size, obj.object.form)) {
+                    validObjects.push(objStr);
+                }
+            });
 
-        } else {    
+            validObjects.forEach((objStr) => {
+                var objDef = objects[objStr];
 
-        }
+                objectStrings.forEach((objStr2) => {
+                    var objDef2 = objects[objStr2];
+
+                    if(fitsDescription(objDef2, obj.location.entity.object.color, obj.location.entity.object.size, 
+                        obj.location.entity.object.form)) {
+
+                        if(relationCheck(objects[objStr], objects[objStr2], obj.location.relation, state)){
+
+                            result.push(objStr);
+                        }
+                    }
+                });
+            });
+        }   
+        if(result.length == 0) return null;
         return result;
     }
 
@@ -171,14 +193,52 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
         if(loc.entity.object.object == null){
 
+            if(loc.entity.object.form == "floor"){
+                if(constraints(objects[mainStr], loc.entity.object, loc.relation, state)){
+                    result.push("floor");
+                }
+            } else {
+                objectStrings.forEach((objStr) => {
+                    var objDef = objects[objStr];
+                    if(fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, 
+                        loc.entity.object.form)) {
+                        if(constraints(objects[mainStr], objDef, loc.relation, state)){
+                            result.push(objStr);
+                        }
+                    }
+                });
+            }
+        } else {
+
+            var validObjects : string[] = [];
             objectStrings.forEach((objStr) => {
                 var objDef = objects[objStr];
                 
-                if(fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, 
-                    loc.entity.object.form)) {
-                    if(constraints(objects[mainStr], objDef, loc.relation, state)){
+                if(fitsDescription(objDef, loc.entity.object.object.color, loc.entity.object.object.size, loc.entity.object.object.form)) {
+                    validObjects.push(objStr);
+                }
+            });
+
+            validObjects.forEach((objStr) => {
+                var objDef = objects[objStr];
+
+                if(loc.entity.object.location.entity.object.form == "floor"){
+                    if(relationCheck(objDef, loc.entity.object.location.entity.object, 
+                        loc.entity.object.location.relation, state)){
                         result.push(objStr);
                     }
+                } else {    
+                    objectStrings.forEach((objStr2) => {
+                        var objDef2 = objects[objStr2];
+
+                        if(fitsDescription(objDef2, loc.entity.object.location.entity.object.color, 
+                            loc.entity.object.location.entity.object.size, 
+                            loc.entity.object.location.entity.object.form)) {
+                            if(relationCheck(objects[objStr], objects[objStr2], loc.entity.object.location.relation, state)){
+                                result.push(objStr);
+                            }
+                        }
+                    });
                 }
             });
         }
@@ -247,7 +307,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if(obj1 == obj2){
             return false;
         }
-        // if(obj1 == "floor") return false;
 
         var indexX : number = -2;
         var sndIndexX : number = -2;
@@ -272,7 +331,10 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 indexY == sndIndexY + 1;
         }
 
-        if(relation == "ontop") return indexX == sndIndexX && indexY == sndIndexY - 1;
+        if(relation == "ontop"){
+            if(obj2.form == "floor") return indexY == 0;
+            return indexX == sndIndexX && indexY == sndIndexY - 1;
+        }
         if(relation == "above") return indexX == sndIndexX && indexY < sndIndexY;
 
         if(relation == "beside") return indexX == sndIndexX + 1 || indexX == sndIndexX - 1;
@@ -292,14 +354,11 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
 
-        console.log("constraint test:");
-        console.log("specs obj1: " + obj1.color + " " + obj1.form + " " + obj1.size);
-        console.log("specs obj2: " + obj2.color + " " + obj2.form + " " + obj2.size);
-
         if(obj1 == obj2){
             return false;
         }
-        if(obj1 == "floor") return false;
+
+        if(obj1.form == "floor") return false;
 
         if(relation == "inside"){
             if(obj2.form != "box") return false;

@@ -2655,7 +2655,7 @@ var Interpreter;
             default:
                 break;
         }
-        if (interpretations.length == 0)
+        if (interpretations[0] == null)
             return null;
         return interpretations;
     }
@@ -2672,20 +2672,40 @@ var Interpreter;
         });
         return result;
     }
-    function getSubjects(object, state) {
+    function getSubjects(obj, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
         var result = [];
-        if (object.location == null) {
+        if (obj.location == null) {
             objectStrings.forEach(function (objStr) {
                 var objDef = objects[objStr];
-                if (fitsDescription(objDef, object.color, object.size, object.form)) {
+                if (fitsDescription(objDef, obj.color, obj.size, obj.form)) {
                     result.push(objStr);
                 }
             });
         }
         else {
+            var validObjects = [];
+            objectStrings.forEach(function (objStr) {
+                var objDef = objects[objStr];
+                if (fitsDescription(objDef, obj.object.color, obj.object.size, obj.object.form)) {
+                    validObjects.push(objStr);
+                }
+            });
+            validObjects.forEach(function (objStr) {
+                var objDef = objects[objStr];
+                objectStrings.forEach(function (objStr2) {
+                    var objDef2 = objects[objStr2];
+                    if (fitsDescription(objDef2, obj.location.entity.object.color, obj.location.entity.object.size, obj.location.entity.object.form)) {
+                        if (relationCheck(objects[objStr], objects[objStr2], obj.location.relation, state)) {
+                            result.push(objStr);
+                        }
+                    }
+                });
+            });
         }
+        if (result.length == 0)
+            return null;
         return result;
     }
     function getTargets(mainStr, loc, state) {
@@ -2693,12 +2713,46 @@ var Interpreter;
         var objects = state.objects;
         var result = [];
         if (loc.entity.object.object == null) {
+            if (loc.entity.object.form == "floor") {
+                if (constraints(objects[mainStr], loc.entity.object, loc.relation, state)) {
+                    result.push("floor");
+                }
+            }
+            else {
+                objectStrings.forEach(function (objStr) {
+                    var objDef = objects[objStr];
+                    if (fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, loc.entity.object.form)) {
+                        if (constraints(objects[mainStr], objDef, loc.relation, state)) {
+                            result.push(objStr);
+                        }
+                    }
+                });
+            }
+        }
+        else {
+            var validObjects = [];
             objectStrings.forEach(function (objStr) {
                 var objDef = objects[objStr];
-                if (fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, loc.entity.object.form)) {
-                    if (constraints(objects[mainStr], objDef, loc.relation, state)) {
+                if (fitsDescription(objDef, loc.entity.object.object.color, loc.entity.object.object.size, loc.entity.object.object.form)) {
+                    validObjects.push(objStr);
+                }
+            });
+            validObjects.forEach(function (objStr) {
+                var objDef = objects[objStr];
+                if (loc.entity.object.location.entity.object.form == "floor") {
+                    if (relationCheck(objDef, loc.entity.object.location.entity.object, loc.entity.object.location.relation, state)) {
                         result.push(objStr);
                     }
+                }
+                else {
+                    objectStrings.forEach(function (objStr2) {
+                        var objDef2 = objects[objStr2];
+                        if (fitsDescription(objDef2, loc.entity.object.location.entity.object.color, loc.entity.object.location.entity.object.size, loc.entity.object.location.entity.object.form)) {
+                            if (relationCheck(objects[objStr], objects[objStr2], loc.entity.object.location.relation, state)) {
+                                result.push(objStr);
+                            }
+                        }
+                    });
                 }
             });
         }
@@ -2753,7 +2807,6 @@ var Interpreter;
         if (obj1 == obj2) {
             return false;
         }
-        // if(obj1 == "floor") return false;
         var indexX = -2;
         var sndIndexX = -2;
         var indexY = -2;
@@ -2774,8 +2827,11 @@ var Interpreter;
             return constraints(obj1, obj2, "inside", state) && indexX == sndIndexX &&
                 indexY == sndIndexY + 1;
         }
-        if (relation == "ontop")
+        if (relation == "ontop") {
+            if (obj2.form == "floor")
+                return indexY == 0;
             return indexX == sndIndexX && indexY == sndIndexY - 1;
+        }
         if (relation == "above")
             return indexX == sndIndexX && indexY < sndIndexY;
         if (relation == "beside")
@@ -2794,13 +2850,10 @@ var Interpreter;
     function constraints(obj1, obj2, relation, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
-        console.log("constraint test:");
-        console.log("specs obj1: " + obj1.color + " " + obj1.form + " " + obj1.size);
-        console.log("specs obj2: " + obj2.color + " " + obj2.form + " " + obj2.size);
         if (obj1 == obj2) {
             return false;
         }
-        if (obj1 == "floor")
+        if (obj1.form == "floor")
             return false;
         if (relation == "inside") {
             if (obj2.form != "box")
@@ -3369,7 +3422,7 @@ var allTestCases = [
         interpretations: [["leftof(e,f)", "leftof(f,e)"]]
     },
     { world: "small",
-        utterance: "take a white object beside a blue object",
+        utterance: "take all white objects beside a blue object",
         interpretations: [["holding(e)"]]
     },
     { world: "small",
