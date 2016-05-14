@@ -2646,7 +2646,7 @@ var Interpreter;
                 });
                 break;
             case "move":
-                // interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
+                interpretations = interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
                 break;
             case "put":
                 if (state.holding == null)
@@ -2656,6 +2656,58 @@ var Interpreter;
                 break;
         }
         return interpretations;
+    }
+    function getMoveInterpretations(entity, loc, state) {
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        var result = [];
+        var subjects = getSubjects(entity.object, state);
+        subjects.forEach(function (subject) {
+            console.log("subject found: " + subject + " specs: " + objects[subject].color + " " +
+                objects[subject].form + " " + objects[subject].size);
+            var targets = getTargets(subject, loc, state);
+            console.log(targets.length);
+            targets.forEach(function (target) {
+                result.push([{ polarity: true, relation: loc.relation, args: [subject, target] }]);
+            });
+        });
+        return result;
+    }
+    function getSubjects(object, state) {
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        var result = [];
+        if (object.location == null) {
+            objectStrings.forEach(function (objStr) {
+                var objDef = objects[objStr];
+                if (fitsDescription(objDef, object.color, object.size, object.form)) {
+                    result.push(objStr);
+                }
+            });
+        }
+        else {
+        }
+        return result;
+    }
+    function getTargets(mainStr, loc, state) {
+        var objectStrings = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+        var result = [];
+        if (loc.entity.object.object == null) {
+            objectStrings.forEach(function (objStr) {
+                var objDef = objects[objStr];
+                if (fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, loc.entity.object.form)) {
+                    console.log("target found: " + objStr + " specs: " + objects[objStr].color + " " +
+                        objects[objStr].form + " " + objects[objStr].size);
+                    if (constraints(objects[mainStr], objDef, loc.relation, state)) {
+                        result.push(objStr);
+                        console.log("Valid object: " + objStr);
+                    }
+                }
+            });
+        }
+        console.log(result);
+        return result;
     }
     function getTakeObjects(entity, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
@@ -2706,8 +2758,7 @@ var Interpreter;
         if (obj1 == obj2) {
             return false;
         }
-        if (obj1 == "floor")
-            return false;
+        // if(obj1 == "floor") return false;
         var indexX = -2;
         var sndIndexX = -2;
         var indexY = -2;
@@ -2748,6 +2799,8 @@ var Interpreter;
     function constraints(obj1, obj2, relation, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
+        console.log("specs obj1: " + obj1.color + " " + obj1.form + " " + obj1.size);
+        console.log("specs obj2: " + obj2.color + " " + obj2.form + " " + obj2.size);
         if (obj1 == obj2) {
             return false;
         }
@@ -2756,7 +2809,7 @@ var Interpreter;
         if (relation == "inside") {
             if (!((obj1.form == "ball" || obj1.form == "box") && obj2.form == "box"))
                 return false;
-            if (obj1.size == "large")
+            if (obj1.size == "small")
                 return obj2.size == "large";
             return true;
         }

@@ -111,7 +111,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 });
                 break;
             case "move":
-                // interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
+                interpretations = interpretations.concat(getMoveInterpretations(cmd.entity, cmd.location, state));
                 break;
             case "put":
                 if(state.holding == null)
@@ -125,11 +125,92 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         return interpretations;
     }
 
+    function getMoveInterpretations(entity : Parser.Entity, loc : Parser.Location, state : WorldState) : DNFFormula {
+        var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+
+        var result : DNFFormula = [];
+
+        var subjects : string[] = getSubjects(entity.object, state);
+
+        subjects.forEach((subject) => {
+            console.log("subject found: " + subject + " specs: " + objects[subject].color + " " + 
+                objects[subject].form + " " + objects[subject].size);
+            var targets : string[] = getTargets(subject, loc, state);
+            console.log(targets.length);
+            targets.forEach((target) => {
+                result.push([{polarity: true, relation: loc.relation, args: [subject, target]}]);
+            });
+        });
+
+
+        return result;
+    }
+
+    function getSubjects(object : Parser.Object, state : WorldState) : string[] {
+        var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+
+        var result : string[] = [];
+        if(object.location == null){
+            objectStrings.forEach((objStr) => {
+                var objDef = objects[objStr];
+
+                if(fitsDescription(objDef, object.color, object.size, object.form)) {
+                    result.push(objStr);
+                }
+            });
+
+        } else { //case where "depth" = 1, not sure if deeper...    
+            // var validObjects : string[] = [];
+            // objectStrings.forEach((objStr) => {
+            //     var objDef = objects[objStr];
+                
+            //     if(fitsDescription(objDef, entity.object.object.color, 
+            //         entity.object.object.size, entity.object.object.form)) {
+            //         validObjects.push(objStr);
+            //     }
+            // });
+            // validObjects.forEach((objStr) => {
+            //     if(isValidTakeObject(objects[objStr], entity.object, state))
+            //         result.push(objStr);
+            // });
+        }
+        return result;
+    }
+
+    function getTargets(mainStr : string, loc: Parser.Location, state : WorldState) : string[]{
+        var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
+        var objects = state.objects;
+
+        var result : string[] = [];
+
+        if(loc.entity.object.object == null){
+
+            objectStrings.forEach((objStr) => {
+                var objDef = objects[objStr];
+                
+                if(fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, 
+                    loc.entity.object.form)) {
+                    console.log("target found: " + objStr + " specs: " + objects[objStr].color + " " + 
+                        objects[objStr].form + " " + objects[objStr].size);
+                    if(constraints(objects[mainStr], objDef, loc.relation, state)){
+                        result.push(objStr);
+                        console.log("Valid object: " + objStr);
+                    }
+                }
+            });
+        }
+        console.log(result);
+        return result;
+    }
+
     function getTakeObjects(entity : Parser.Entity, state : WorldState) : string[] {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
 
         var result : string[] = [];
+
 
         if(entity.object.location == null){
             objectStrings.forEach((objStr) => {
@@ -187,7 +268,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if(obj1 == obj2){
             return false;
         }
-        if(obj1 == "floor") return false;
+        // if(obj1 == "floor") return false;
 
         var indexX : number = -2;
         var sndIndexX : number = -2;
@@ -206,10 +287,12 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 }
             }
         }
+
         if(relation == "inside"){
             return constraints(obj1, obj2, "inside", state) && indexX == sndIndexX && 
                 indexY == sndIndexY + 1;
         }
+
         if(relation == "ontop") return indexX == sndIndexX && indexY == sndIndexY - 1;
         if(relation == "above") return indexX == sndIndexX && indexY < sndIndexY;
 
@@ -229,6 +312,10 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
+
+
+        console.log("specs obj1: " + obj1.color + " " + obj1.form + " " + obj1.size);
+        console.log("specs obj2: " + obj2.color + " " + obj2.form + " " + obj2.size);
 
         if(obj1 == obj2){
             return false;
