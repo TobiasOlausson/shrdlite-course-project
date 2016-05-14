@@ -121,7 +121,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             default:
                 break;
             }
-
+        if(interpretations.length == 0) return null;
         return interpretations;
     }
 
@@ -139,7 +139,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 result.push([{polarity: true, relation: loc.relation, args: [subject, target]}]);
             });
         });
-
 
         return result;
     }

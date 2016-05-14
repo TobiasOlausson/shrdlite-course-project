@@ -2655,6 +2655,8 @@ var Interpreter;
             default:
                 break;
         }
+        if (interpretations.length == 0)
+            return null;
         return interpretations;
     }
     function getMoveInterpretations(entity, loc, state) {
