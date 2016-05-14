@@ -81,7 +81,7 @@ function aStarSearch<Node> (
   closedSetNode.push(tmp);
 
   //Iteration
-  while (!pQueue.isEmpty()) {
+  while(!pQueue.isEmpty()) {
     // Check for timeout, return empty result
     if(Date.now() - startTime >= (timeout*1000)){
       return result;
@@ -109,13 +109,13 @@ function aStarSearch<Node> (
     //Add neighbouring edges to queue
     var adjEdges : Edge<Node>[] = 
       graph.outgoingEdges(first.current);
-    for (var i = 0; i < adjEdges.length; i++){
+    for(var i = 0; i < adjEdges.length; i++){
 
       // If in open set with lower cost, do not add successor
       var inOpen : boolean = false;
       pQueue.forEach(function(Object1){
         if(graph.compareNodes(Object1.current, adjEdges[i].to) == 0 && 
-          (Object1.cost + heuristics(Object1.current)) > 
+          (Object1.cost + heuristics(Object1.current)) < 
             (adjEdges[i].cost + first.cost + heuristics(adjEdges[i].to))){
           inOpen = true;
         }
@@ -123,8 +123,8 @@ function aStarSearch<Node> (
 
       // If in closed, do not add successor
       var inClosed : boolean = false;
-      for(var k4 = 0; k4 < closedSetNode.length; k4++){
-        if(graph.compareNodes(closedSetNode[k4].current, adjEdges[i].to) == 0){
+      for(var j = 0; j < closedSetNode.length; j++){
+        if(graph.compareNodes(closedSetNode[j].current, adjEdges[i].to) == 0){
           inClosed = true;
           break;
         }
