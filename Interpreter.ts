@@ -233,14 +233,15 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                     obj.location.entity.object.form)) {
   
                     if(relationCheck(mainObj, objDef, obj.location.relation, state)){
-                        console.log("realtion check passed");
                         validObjects.push(objStr);
                     }
                 }
             }else{
                 // console.log("location with location------------------------------------------");
-                if (isValidLocation(obj.object, obj.location.entity.object,  state)){
-                    validObjects.push(objStr);
+                if (isValidLocation(objects[objStr], obj.location.entity.object,  state)){
+                    if(relationCheck(mainObj, objDef, obj.location.relation, state)){
+                        validObjects.push(objStr);
+                    }
                 }
             }
         });
