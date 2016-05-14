@@ -211,9 +211,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
         var result : string[] = [];
 
-
-        if(entity.object.location == null){
-            objectStrings.forEach((objStr) => {
+        if(entity.object.location == null){ // The entity has no object reference
+            objectStrings.forEach((objStr) => {  // Find all objects matching the description
                 var objDef = objects[objStr];
 
                 if(fitsDescription(objDef, entity.object.color, entity.object.size, entity.object.form)) {
@@ -221,9 +220,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 }
             });
 
-        } else {            
+        } else { // The entity has an object reference    
             var validObjects : string[] = [];
-            objectStrings.forEach((objStr) => {
+            objectStrings.forEach((objStr) => { //Find all objects matching the description of the primary object
                 var objDef = objects[objStr];
                 
                 if(fitsDescription(objDef, entity.object.object.color, 
@@ -231,7 +230,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                     validObjects.push(objStr);
                 }
             });
-            validObjects.forEach((objStr) => {
+            validObjects.forEach((objStr) => { // Add all objects that have valid location and relation
                 if(isValidTakeObject(objects[objStr], entity.object, state))
                     result.push(objStr);
             });
@@ -324,7 +323,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
         if(relation == "inside"){
             if(!((obj1.form == "ball" || obj1.form == "box") && obj2.form == "box")) return false;
-            if(obj1.size == "large") return obj2.size == "large";
+            if(obj2.size == "large") return obj1.size == "small";
             return true;
         }
         if(relation == "ontop"){

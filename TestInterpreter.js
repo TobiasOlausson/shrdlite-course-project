@@ -2809,8 +2809,8 @@ var Interpreter;
         if (relation == "inside") {
             if (!((obj1.form == "ball" || obj1.form == "box") && obj2.form == "box"))
                 return false;
-            if (obj1.size == "small")
-                return obj2.size == "large";
+            if (obj2.size == "large")
+                return obj1.size == "small";
             return true;
         }
         if (relation == "ontop") {
