@@ -2,154 +2,149 @@
 ///<reference path="lib/node.d.ts"/>
 
 /** Graph module
- *
- *  Types for generic A\* implementation.
- *
- *  *NB.* The only part of this module
- *  that you should change is the `aStarSearch` function. Everything
- *  else should be used as-is.
- */
+*
+*  Types for generic A\* implementation.
+*/
 
 /** An edge in a graph. */
 class Edge<Node> {
-    from : Node;
-    to   : Node;
-    cost : number;
+  from : Node;
+  to   : Node;
+  cost : number;
 }
 
 /** A directed graph. */
 interface Graph<Node> {
-    /** Computes the edges that leave from a node. */
-    outgoingEdges(node : Node) : Edge<Node>[];
-    /** A function that compares nodes. */
-    compareNodes : collections.ICompareFunction<Node>;
+  /** Computes the edges that leave from a node. */
+  outgoingEdges(node : Node) : Edge<Node>[];
+  /** A function that compares nodes. */
+  compareNodes : collections.ICompareFunction<Node>;
 }
 
 /** Type that reports the result of a search. */
 class SearchResult<Node> {
-    /** The path (sequence of Nodes) found by the search algorithm. */
-    path : Node[];
-    /** The total cost of the path. */
-    cost : number;
+  /** The path (sequence of Nodes) found by the search algorithm. */
+  path : Node[];
+  /** The total cost of the path. */
+  cost : number;
+}
+
+/** Type stored in the priority queue. Keeps track of its parent
+    in order to reconstruct the path.*/
+class StoredNode<Node> {
+  parent : Node;
+  current : Node;
+  cost : number;
 }
 
 /**
- * A\* search implementation, parameterised by a `Node` type. The code
- * here is just a template; you should rewrite this function
- * entirely. In this template, the code produces a dummy search result
- * which just picks the first possible neighbour.
- *
- * Note that you should not change the API (type) of this function,
- * only its body.
- * @param graph The graph on which to perform A\* search.
- * @param start The initial node.
- * @param goal A function that returns true when given a goal node. Used to determine if the algorithm has reached the goal.
- * @param heuristics The heuristic function. Used to estimate the cost of reaching the goal from a given Node.
- * @param timeout Maximum time (in seconds) to spend performing A\* search.
- * @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
- */
+* An implementation of the A* search algorithm using a priority queue.
+* @param graph The graph on which to perform A\* search.
+* @param start The initial node.
+* @param goal A function that returns true when given a goal node. Used to determine if the algorithm has reached the goal.
+* @param heuristics The heuristic function. Used to estimate the cost of reaching the goal from a given Node.
+* @param timeout Maximum time (in seconds) to spend performing A\* search.
+* @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
+*/
 function aStarSearch<Node> (
-    graph : Graph<Node>,
-    start : Node,
-    goal : (n:Node) => boolean,
-    heuristics : (n:Node) => number,
-    timeout : number
-) : SearchResult<Node> {
-    var pQueue = new collections.PriorityQueue<SearchResult<Node>>(
-	function(Object1, Object2){
-            return (Object2.cost + heuristics(Object2.path[Object2.path.length-1])) -
-                (Object1.cost + heuristics(Object1.path[Object1.path.length-1]))
-	});
-    var result : SearchResult<Node> = {
-        path: [start],
-        cost: 0
-    };
+  graph : Graph<Node>,
+  start : Node,
+  goal : (n:Node) => boolean,
+  heuristics : (n:Node) => number,
+  timeout : number
+  ) : SearchResult<Node> {
+  var pQueue = new collections.PriorityQueue<StoredNode<Node>>(
+    function(Object1, Object2){
+        return (Object2.cost + heuristics(Object2.current)) -
+        (Object1.cost + heuristics(Object1.current))
+    }
+  );
 
-    //Used to check for timeout (timeout : number)
-    var startTime : number = Date.now();
-    
-    //Initial queue edges
-    var startEdges : Edge<Node>[] = graph.outgoingEdges(start);
-    for (var i = 0; i < startEdges.length; i++){
-	var tmp2 : SearchResult<Node> = {
-            path: [start],
-            cost: 0
-	};
+  var result : SearchResult<Node> = {
+    path: [],
+    cost: 0
+  };
 
-	tmp2.cost += startEdges[i].cost;
-	tmp2.path.push(startEdges[i].to);
-	pQueue.enqueue(tmp2);
+  //Used to check for timeout (timeout : number)
+  var startTime : number = Date.now();
+
+  //Initial queue edges
+  var tmp : StoredNode<Node> = {
+    parent: undefined,
+    current: start,
+    cost: 0
+  };
+  pQueue.enqueue(tmp);
+
+  //Used to store the node with the lowest f value
+  var closedSetNode : StoredNode<Node>[] = [];
+  closedSetNode.push(tmp);
+
+  //Iteration
+  while (!pQueue.isEmpty()) {
+    // Check for timeout, return empty result
+    if(Date.now() - startTime >= (timeout*1000)){
+      return result;
     }
 
-    //Used to store the node with the lowest f value
-    var closedSet : collections.Dictionary<Node, number> =
-	new collections.Dictionary<Node, number>();
-    closedSet.setValue(start, 0);
+    // First element in priority queue
+    var first : StoredNode<Node> = pQueue.dequeue();
 
-    //Iteration
-    while (!pQueue.isEmpty()) {
-	// Check for timeout
-	if(Date.now() - startTime >= (timeout*1000)){
-            return result;
-	}
-
-	var s : SearchResult<Node> = pQueue.dequeue();
-	
-	if (goal(s.path[s.path.length-1])) {
-            return s;
-	}
-
-        //Add neighbouring edges to queue
-	var adjEdges : Edge<Node>[] = 
-            graph.outgoingEdges(s.path[s.path.length-1]);
-
-	for (var i = 0; i < adjEdges.length; i++){
-
-            // check to see if already in path
-            var inPath : boolean = false;
-            for(var j = 0; j < s.path.length; j++){
-		if(graph.compareNodes(adjEdges[i].to, s.path[j]) == 0){
-		    inPath = true;
-		    break;
-		}
-            }
-            // If node found in closed set with lower f value, do not add
-            var lowerInClosed : boolean = false;
-
-	    var storedFValue : number = closedSet.getValue(adjEdges[i].from);
-	    if (storedFValue < s.cost + adjEdges[i].cost + heuristics(adjEdges[i].to)) {
-		lowerInClosed = true;
-	    }
-
-            // if not in path, add to path and add to queue
-            if(!inPath && !lowerInClosed){
-		var tmp3 : SearchResult<Node> = newTemp(s);
-		tmp3.cost += adjEdges[i].cost;
-		tmp3.path = tmp3.path;
-		tmp3.path.push(adjEdges[i].to);
-		pQueue.enqueue(tmp3);
-            }
-
-	}
-	// Add node to closed set
-	closedSet.setValue(s.path[s.path.length-1],
-			   s.cost + heuristics(s.path[s.path.length-1]));
-    }
-    return result;
-}
-
-
-function newTemp<Node>(s1:SearchResult<Node>) : SearchResult<Node> {
-    var nodes: Node[] = [];
-
-    for(var q = 0; q < s1.path.length; q++) {
-	nodes.push(s1.path[q]);
+    // Goal found, reconstruct path
+    if (goal(first.current)) {
+      var next : StoredNode<Node> = first;
+      result.cost += first.cost;
+      while(true){
+        for(var n = 0; n < closedSetNode.length; n++){
+          if(graph.compareNodes(closedSetNode[n].current, next.parent) == 0){
+            next = closedSetNode[n];
+            result.path.unshift(next.current);
+            if(next.parent == undefined)
+              return result;
+          }
+        }
+      }
     }
 
-    var newT: SearchResult<Node> = {
-	path: nodes,
-	cost: s1.cost
-    };
+    //Add neighbouring edges to queue
+    var adjEdges : Edge<Node>[] = 
+      graph.outgoingEdges(first.current);
+    for (var i = 0; i < adjEdges.length; i++){
 
-    return newT;
+      // If in open set with lower cost, do not add successor
+      var inOpen : boolean = false;
+      pQueue.forEach(function(Object1){
+        if(graph.compareNodes(Object1.current, adjEdges[i].to) == 0 && 
+          (Object1.cost + heuristics(Object1.current)) > 
+            (adjEdges[i].cost + first.cost + heuristics(adjEdges[i].to))){
+          inOpen = true;
+        }
+      });
+
+      // If in closed, do not add successor
+      var inClosed : boolean = false;
+      for(var k4 = 0; k4 < closedSetNode.length; k4++){
+        if(graph.compareNodes(closedSetNode[k4].current, adjEdges[i].to) == 0){
+          inClosed = true;
+          break;
+        }
+      }
+
+      // if not in closed and not in open set, add to open set
+      if(!inOpen && !inClosed){
+        var tmp2 : StoredNode<Node> = {
+          parent: first.current,
+          current: adjEdges[i].to,
+          cost: first.cost + adjEdges[i].cost
+        };
+        pQueue.enqueue(tmp2);
+      }
+    }
+
+  // Add node to closed set
+  closedSetNode.push(first);
+  }
+
+  // no path was found, return empty result
+  return result;
 }
