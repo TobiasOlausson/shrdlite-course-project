@@ -2663,10 +2663,7 @@ var Interpreter;
         var result = [];
         var subjects = getSubjects(entity.object, state);
         subjects.forEach(function (subject) {
-            console.log("subject found: " + subject + " specs: " + objects[subject].color + " " +
-                objects[subject].form + " " + objects[subject].size);
             var targets = getTargets(subject, loc, state);
-            console.log(targets.length);
             targets.forEach(function (target) {
                 result.push([{ polarity: true, relation: loc.relation, args: [subject, target] }]);
             });
@@ -2697,16 +2694,12 @@ var Interpreter;
             objectStrings.forEach(function (objStr) {
                 var objDef = objects[objStr];
                 if (fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, loc.entity.object.form)) {
-                    console.log("target found: " + objStr + " specs: " + objects[objStr].color + " " +
-                        objects[objStr].form + " " + objects[objStr].size);
                     if (constraints(objects[mainStr], objDef, loc.relation, state)) {
                         result.push(objStr);
-                        console.log("Valid object: " + objStr);
                     }
                 }
             });
         }
-        console.log(result);
         return result;
     }
     function getTakeObjects(entity, state) {
@@ -2799,6 +2792,7 @@ var Interpreter;
     function constraints(obj1, obj2, relation, state) {
         var objectStrings = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
+        console.log("constraint test:");
         console.log("specs obj1: " + obj1.color + " " + obj1.form + " " + obj1.size);
         console.log("specs obj2: " + obj2.color + " " + obj2.form + " " + obj2.size);
         if (obj1 == obj2) {
@@ -2807,10 +2801,13 @@ var Interpreter;
         if (obj1 == "floor")
             return false;
         if (relation == "inside") {
-            if (!((obj1.form == "ball" || obj1.form == "box") && obj2.form == "box"))
+            if (obj2.form != "box")
                 return false;
-            if (obj2.size == "large")
-                return obj1.size == "small";
+            if (obj1.form == "ball") {
+                if (obj1.size == "large")
+                    return obj2.size == "large";
+                return true;
+            }
             return true;
         }
         if (relation == "ontop") {

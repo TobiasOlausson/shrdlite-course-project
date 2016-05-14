@@ -134,10 +134,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         var subjects : string[] = getSubjects(entity.object, state);
 
         subjects.forEach((subject) => {
-            console.log("subject found: " + subject + " specs: " + objects[subject].color + " " + 
-                objects[subject].form + " " + objects[subject].size);
             var targets : string[] = getTargets(subject, loc, state);
-            console.log(targets.length);
             targets.forEach((target) => {
                 result.push([{polarity: true, relation: loc.relation, args: [subject, target]}]);
             });
@@ -161,20 +158,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 }
             });
 
-        } else { //case where "depth" = 1, not sure if deeper...    
-            // var validObjects : string[] = [];
-            // objectStrings.forEach((objStr) => {
-            //     var objDef = objects[objStr];
-                
-            //     if(fitsDescription(objDef, entity.object.object.color, 
-            //         entity.object.object.size, entity.object.object.form)) {
-            //         validObjects.push(objStr);
-            //     }
-            // });
-            // validObjects.forEach((objStr) => {
-            //     if(isValidTakeObject(objects[objStr], entity.object, state))
-            //         result.push(objStr);
-            // });
+        } else {    
+
         }
         return result;
     }
@@ -192,16 +177,12 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 
                 if(fitsDescription(objDef, loc.entity.object.color, loc.entity.object.size, 
                     loc.entity.object.form)) {
-                    console.log("target found: " + objStr + " specs: " + objects[objStr].color + " " + 
-                        objects[objStr].form + " " + objects[objStr].size);
                     if(constraints(objects[mainStr], objDef, loc.relation, state)){
                         result.push(objStr);
-                        console.log("Valid object: " + objStr);
                     }
                 }
             });
         }
-        console.log(result);
         return result;
     }
 
@@ -312,7 +293,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
 
-
+        console.log("constraint test:");
         console.log("specs obj1: " + obj1.color + " " + obj1.form + " " + obj1.size);
         console.log("specs obj2: " + obj2.color + " " + obj2.form + " " + obj2.size);
 
@@ -322,8 +303,11 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if(obj1 == "floor") return false;
 
         if(relation == "inside"){
-            if(!((obj1.form == "ball" || obj1.form == "box") && obj2.form == "box")) return false;
-            if(obj2.size == "large") return obj1.size == "small";
+            if(obj2.form != "box") return false;
+            if(obj1.form == "ball"){
+                if(obj1.size == "large") return obj2.size == "large";
+                return true;
+            }
             return true;
         }
         if(relation == "ontop"){
