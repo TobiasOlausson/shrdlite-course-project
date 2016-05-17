@@ -89,11 +89,13 @@ function aStarSearch<Node> (
 
     // First element in priority queue
     var first : StoredNode<Node> = pQueue.dequeue();
+    closedSetNode.push(first);
 
     // Goal found, reconstruct path
     if (goal(first.current)) {
       var next : StoredNode<Node> = first;
       result.cost += first.cost;
+      result.path.push(first.current);
       while(true){
         for(var n = 0; n < closedSetNode.length; n++){
           if(graph.compareNodes(closedSetNode[n].current, next.parent) == 0){
@@ -139,7 +141,6 @@ function aStarSearch<Node> (
           cost: first.cost + adjEdges[i].cost
         };
         pQueue.enqueue(tmp2);
-        closedSetNode.push(tmp2);
       }
     }
   }
