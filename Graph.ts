@@ -76,6 +76,7 @@ function aStarSearch<Node> (
   };
   pQueue.enqueue(tmp);
 
+
   //Used to store the node with the lowest f value
   var closedSetNode : StoredNode<Node>[] = [];
   closedSetNode.push(tmp);
@@ -99,7 +100,6 @@ function aStarSearch<Node> (
       while(true){
         for(var n = 0; n < closedSetNode.length; n++){
           if(graph.compareNodes(closedSetNode[n].current, next.parent) == 0){
-
             next = closedSetNode[n];
             result.path.unshift(next.current);
             if(next.parent == undefined)
@@ -118,7 +118,7 @@ function aStarSearch<Node> (
       var inOpen : boolean = false;
       pQueue.forEach(function(Object1){
         if(graph.compareNodes(Object1.current, adjEdges[i].to) == 0 && 
-          (Object1.cost + heuristics(Object1.current)) < 
+          (Object1.cost + heuristics(Object1.current)) <= 
             (adjEdges[i].cost + first.cost + heuristics(adjEdges[i].to))){
           inOpen = true;
         }
