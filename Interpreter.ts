@@ -212,39 +212,48 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if(obj1 == obj2){
             return false;
         }
-        // if(obj1 == "floor") return false;
 
-        var indexX : number = -2;
-        var sndIndexX : number = -2;
-        var indexY : number = -2;
-        var sndIndexY : number = -2;
+        if(obj1.form == "floor") return false;
+
+        var obj1X : number = Infinity;
+        var obj2X : number = Infinity;
+        var obj1Y : number = Infinity;
+        var obj2Y : number = Infinity;
+        // find indices of obj1 and obj2
         for(var x : number = 0; x < state.stacks.length; x++){
             for(var y : number = 0; y < state.stacks[x].length; y++){
                 if(objects[state.stacks[x][y]] == obj2){
-                    sndIndexX = x;
-                    sndIndexY = y;
+                    obj2X = x;
+                    obj2Y = y;
                 }
 
                 if(objects[state.stacks[x][y]] == obj1){
-                    indexX = x;
-                    indexY = y;
+                    obj1X = x;
+                    obj1Y = y;
                 }
             }
         }
+        // no objects were found
+        if(obj1X == Infinity || obj2 == Infinity)
+            return false;
 
-        if(relation == "inside"){
-            return constraints(obj1, obj2, "inside", state) && indexX == sndIndexX && 
-                indexY == sndIndexY + 1;
+        switch(relation){
+            case "inside":
+                return constraints(obj1, obj2, "inside", state) && obj1X == obj2X && 
+                    obj1Y == obj2Y + 1;
+            case "ontop":
+                return obj1X == obj2X && obj1Y == obj2Y - 1;
+            case "above":
+                return obj1X == obj2X && obj1Y < obj2Y;
+            case "beside":
+                return obj1X == obj2X + 1 || obj1X == obj2X - 1;
+            case "leftof":
+                return obj1X < obj2X;
+            case "rightof":
+                return obj1X > obj2X;
+            default:
+                return false;
         }
-
-        if(relation == "ontop") return indexX == sndIndexX && indexY == sndIndexY - 1;
-        if(relation == "above") return indexX == sndIndexX && indexY < sndIndexY;
-
-        if(relation == "beside") return indexX == sndIndexX + 1 || indexX == sndIndexX - 1;
-        if(relation == "leftof") return indexX < sndIndexX;
-        if(relation == "rightof") return indexX > sndIndexX;
-        
-        return false;
     }
 
     function fitsDescription(objectDef : Parser.Object, color : string, size : string, form : string): boolean {        
@@ -254,46 +263,66 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     }
 
     function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
-        var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
-        var objects = state.objects;
-
-        // console.log("constraint test:");
-        // console.log("specs obj1: " + obj1.color + " " + obj1.form + " " + obj1.size);
-        // console.log("specs obj2: " + obj2.color + " " + obj2.form + " " + obj2.size);
-
-        if(obj1 == obj2){
-            return false;
-        }
         if(obj1 == "floor") return false;
 
-        if(relation == "inside"){
-            if(obj2.form != "box"){ 
-                return false;
-            }else if(obj1.form == "box"){
-                return (obj1.size == "small" && obj2.size == "large");
-            }else {
-                if(obj1.size == "large") 
-                    return obj2.size == "large";
-                return true;
-            }
-        }
-        if(relation == "ontop"){
-            if(obj1.form == "ball" && obj2.form == "floor") return true;
-            if(obj1.form == "box" && obj2.form == "table") return true;
+        // shouldnt be needed, check elsewhere
+        if(obj1 == obj2)
             return false;
-        }
-        if(relation == "above"){
-            if(obj2.form == "ball") return false;
-            return true;
-        }
-        if(relation == "leftof"){
-            return true;
-        } 
-        if(relation == "rightof"){
-            return true;
-        }
-        if(relation == "beside"){
-            return true;
+
+        switch(relation) {
+            case "inside":
+                // An object can only be placed inside of a box
+                // Only a number of small objects can be placed in a small box
+                // and certain small objects cant be placed inside a large box
+                // all other cases are true
+                if(obj2.form != "box")
+                    return false;
+                if(obj2.size == "small"){
+                    return obj1.size == "small" && 
+                        (obj1.form == "ball" || obj1.form == "brick" 
+                            || obj1.form == "table");
+                } else {
+                    return obj1.size == "small" || 
+                        (obj1.form != "pyramid" && obj1.form != "box" 
+                            && obj1.form != "plank");
+                }
+            // special cases for ball and box
+            case "ontop":
+                // cant place objects on balls
+                if(obj2.form == "ball")
+                    return false;
+
+                // a ball can only be placed on the floor
+                if(obj1.form == "ball")
+                    return obj2.form == "floor";
+
+                if(obj2.size == "small"){
+                    if(obj1.size == "small")
+                        return !(obj1.form == "ball" && obj2.form == "box");
+                    else
+                        return !(obj1.form == "table" && 
+                            (obj2.form == "box" || 
+                                obj2.form == "brick" || 
+                                obj2.form == "pyramid"));
+                } else {
+                    if(obj2.form == "box"){
+                        if(obj1.size == "small")
+                            return false;
+                        else
+                            return obj1.form != "table" && obj1.form != "plank" 
+                                && obj1.form != "pyramid";
+                    }
+                    return true;
+                }
+            case "above":
+                if(obj2.form == "ball") return false;
+                return true;
+            case "leftof":
+            case "rightof":
+            case "beside":
+                return true;
+            default:
+                break;
         }
         return false;
     }
