@@ -120,7 +120,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                         var obj = objects[ent];
                         var destObj = objects[destEnt];
 
-                        if (constraints(obj, destObj, cmd.location.relation, state)){
+                        if (constraints(obj, destObj, cmd.location.relation)){
 
                             interpretations.push([{polarity: true, relation: cmd.location.relation, args: [ent, destEnt]}]);
                         }
@@ -206,7 +206,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     }
 
     function relationCheck (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
-        var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         var objects = state.objects;
 
         if(obj1 == obj2){
@@ -239,7 +238,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
         switch(relation){
             case "inside":
-                return constraints(obj1, obj2, "inside", state) && obj1X == obj2X && 
+                return constraints(obj1, obj2, "inside") && obj1X == obj2X && 
                     obj1Y == obj2Y + 1;
             case "ontop":
                 return obj1X == obj2X && obj1Y == obj2Y - 1;
@@ -262,7 +261,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             (objectDef.color == color || color == null);
     }
 
-    function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
+    function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
         if(obj1 == "floor") return false;
 
         // shouldnt be needed, check elsewhere
