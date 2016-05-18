@@ -241,8 +241,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if(relation == "above") return indexX == sndIndexX && indexY < sndIndexY;
 
         if(relation == "beside") return indexX == sndIndexX + 1 || indexX == sndIndexX - 1;
-        if(relation == "leftof") return indexX == sndIndexX - 1;
-        if(relation == "rightof") return indexX == sndIndexX + 1;
+        if(relation == "leftof") return indexX < sndIndexX;
+        if(relation == "rightof") return indexX > sndIndexX;
         
         return false;
     }
