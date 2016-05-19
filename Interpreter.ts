@@ -147,22 +147,18 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
         //TODO handle quantifiers
         var result : string[] = getObjects(entity.object, state);
-        // console.log("getEntities just got from getObjects: " + result);
         return result;
     }
     function getObjects(obj : Parser.Object, state : WorldState) : string[] {
         if(obj.location == null){
             return withDescription(obj, state);
         }else{
-            // console.log("about to call locationCheck");
             var result : string[] = locationCheck(getObjects(obj.object, state), obj.location.relation, getEntities(obj.location.entity, state), state);
-            // console.log("just got from locationCheck: " + result);
             return result;
         }
     }
 
     function locationCheck(objectStrings : string[], relation : string, locObjStrings : string[], state : WorldState): string[] {
-        // console.log("at start of locationCheck");
         var result : string[] = [];
 
         objectStrings.forEach((objStr) => {
