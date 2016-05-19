@@ -42,8 +42,11 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         parses.forEach((parseresult) => {
             try {
                 var result : InterpretationResult = <InterpretationResult>parseresult;
-                result.interpretation = interpretCommand(result.parse, currentState);
-                interpretations.push(result);
+                var intprt = interpretCommand(result.parse, currentState);
+                if(intprt != null){
+                    result.interpretation = intprt;
+                    interpretations.push(result);
+                }
             } catch(err) {
                 errors.push(err);
             }
@@ -103,25 +106,25 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {            
         var interpretations : DNFFormula = [];
-
+        console.log("\n\nnew parse");
         switch(cmd.command){
             case "take":
-                var ents : string[]= getEntities(cmd.entity, state);
+                var ents : string[] = getEntities(cmd.entity, state);
                 ents.forEach((objStr) => {
-                    interpretations.push([{polarity: true, relation: "holding", args: [objStr]}]);
+                    if(objStr != "floor")
+                        interpretations.push([{polarity: true, relation: "holding", args: [objStr]}]);
                 });
                 break;
             case "move":
-                var objects = state.objects;
                 var ents : string[] = getEntities(cmd.entity, state);
                 var destEnts = getEntities(cmd.location.entity, state);
                 ents.forEach((ent) => {
+                    var obj = getWorldObject(ent, state);
+
                     destEnts.forEach((destEnt) => {
-                        var obj = objects[ent];
-                        var destObj = objects[destEnt];
+                        var destObj = getWorldObject(destEnt, state);
 
                         if (constraints(obj, destObj, cmd.location.relation)){
-
                             interpretations.push([{polarity: true, relation: cmd.location.relation, args: [ent, destEnt]}]);
                         }
                     });
@@ -135,10 +138,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             default:
                 break;
             }
-        // console.log("about to return " + interpretations[s0][0]);
-        if(interpretations[0] == null) 
+        if(interpretations.length == 0) 
             return null;
-
         return interpretations;
     }
 
@@ -146,30 +147,30 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
         //TODO handle quantifiers
         var result : string[] = getObjects(entity.object, state);
-        console.log("getEntities just got from getObjects: " + result);
+        // console.log("getEntities just got from getObjects: " + result);
         return result;
     }
     function getObjects(obj : Parser.Object, state : WorldState) : string[] {
         if(obj.location == null){
             return withDescription(obj, state);
         }else{
-            console.log("about to call locationCheck");
+            // console.log("about to call locationCheck");
             var result : string[] = locationCheck(getObjects(obj.object, state), obj.location.relation, getEntities(obj.location.entity, state), state);
-            console.log("just got from locationCheck: " + result);
+            // console.log("just got from locationCheck: " + result);
             return result;
         }
     }
 
     function locationCheck(objectStrings : string[], relation : string, locObjStrings : string[], state : WorldState): string[] {
-        console.log("at start of locationCheck");
+        // console.log("at start of locationCheck");
         var result : string[] = [];
-        var objects = state.objects;
-        console.log(objectStrings + " " + relation + " " +  locObjStrings);
+
         objectStrings.forEach((objStr) => {
-                var objDef = objects[objStr];
+                var objDef = getWorldObject(objStr, state);
 
                 locObjStrings.forEach((locStr) => {
-                    var locObj = objects[locStr]
+                    var locObj = getWorldObject(locStr, state);
+
                     if(relationCheck(objDef, locObj, relation, state)) {
                         if(result.indexOf(objStr) == -1){
                             result.push(objStr);
@@ -180,21 +181,28 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         return result;
     }
 
-    function withDescription(obj : Parser.Object, state : WorldState) : string[] {
-
-        // console.log("in withDescription");
-
-        // if(obj.location != null){
-        //     console.log("in withDescription with non null location");
-        //     return [];
-        // }else{
-        var objects = state.objects;
-
-        var result : string[] = [];
+    function getObjectStrings (state : WorldState) : string[] {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
 
+        objectStrings.push("floor");
+        return objectStrings;
+    }
+
+    function getWorldObject (objectString : string, state : WorldState) : ObjectDefinition {
+        var objects = state.objects;
+
+        if(objectString == "floor")
+            return { "form":"floor",   "size":"",  "color":"" };
+        else
+            return objects[objectString];
+    }
+
+    function withDescription(obj : Parser.Object, state : WorldState) : string[] {
+        var result : string[] = [];
+        var objectStrings : string[] = getObjectStrings(state);
+
         objectStrings.forEach((objStr) => {
-            var objDef = objects[objStr];
+            var objDef = getWorldObject(objStr, state);
             
             if(fitsDescription(objDef, obj.color, obj.size, obj.form)) {
                 result.push(objStr);
@@ -202,7 +210,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         });
 
         return result;
-        // }
     }
 
     function relationCheck (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
@@ -232,8 +239,12 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 }
             }
         }
+        if(obj2.form == "floor"){
+            obj2Y = -1;
+            obj2X = obj1X;
+        }
         // no objects were found
-        if(obj1X == Infinity || obj2 == Infinity)
+        if(obj1Y == Infinity || obj2Y == Infinity)
             return false;
 
         switch(relation){
@@ -241,7 +252,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 return constraints(obj1, obj2, "inside") && obj1X == obj2X && 
                     obj1Y == obj2Y + 1;
             case "ontop":
-                return obj1X == obj2X && obj1Y == obj2Y - 1;
+                return obj1X == obj2X && obj1Y == obj2Y + 1;
             case "above":
                 return obj1X == obj2X && obj1Y < obj2Y;
             case "beside":
@@ -255,13 +266,14 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         }
     }
 
-    function fitsDescription(objectDef : Parser.Object, color : string, size : string, form : string): boolean {        
+    function fitsDescription(objectDef : Parser.Object, color : string, size : string, form : string): boolean {
         return (objectDef.form == form || form == "anyform") &&
             (objectDef.size == size || size == null) &&
             (objectDef.color == color || color == null);
     }
 
     function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
+        // console.log("constraints with obj1: " + obj1.form + " obj2: " + obj2.form);
         if(obj1 == "floor") return false;
 
         // shouldnt be needed, check elsewhere
@@ -292,8 +304,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                     return false;
 
                 // a ball can only be placed on the floor
-                if(obj1.form == "ball")
+                if(obj1.form == "ball"){
                     return obj2.form == "floor";
+                }
 
                 if(obj2.size == "small"){
                     if(obj1.size == "small")
