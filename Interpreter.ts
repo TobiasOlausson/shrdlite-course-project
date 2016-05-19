@@ -37,7 +37,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 * @returns Augments ParseResult with a list of interpretations. Each interpretation is represented by a list of Literals.
 */    
     export function interpret(parses : Parser.ParseResult[], currentState : WorldState) : InterpretationResult[] {
-        var errors : Error[] = [];
+        var errors : Error[] = [];  
         var interpretations : InterpretationResult[] = [];
         parses.forEach((parseresult) => {
             try {
@@ -112,7 +112,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 var ents : string[] = getEntities(cmd.entity, state);
                 ents.forEach((objStr) => {
                     if(objStr != "floor")
-                        interpretations.push([{polarity: true, relation: "holding", args: [objStr]}]);
+                        interpretations.push([{polarity: true, relation: "holding", 
+                            args: [objStr]}]);
                 });
                 break;
             case "move":
@@ -125,7 +126,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                         var destObj = getWorldObject(destEnt, state);
 
                         if (constraints(obj, destObj, cmd.location.relation)){
-                            interpretations.push([{polarity: true, relation: cmd.location.relation, args: [ent, destEnt]}]);
+                            interpretations.push([{polarity: true, 
+                                relation: cmd.location.relation, 
+                                args: [ent, destEnt]}]);
                         }
                     });
                 });
@@ -134,6 +137,17 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
                 if(state.holding == null)
                     break;
 
+                var obj = getWorldObject(state.holding, state);
+                var destEnts = getEntities(cmd.location.entity, state);
+                destEnts.forEach((destEnt) => {
+                    var destObj = getWorldObject(destEnt, state);
+
+                    if (constraints(obj, destObj, cmd.location.relation)){
+                        interpretations.push([{polarity: true, 
+                            relation: cmd.location.relation, 
+                            args: [state.holding, destEnt]}]);
+                    }
+                });
                 break;
             default:
                 break;
