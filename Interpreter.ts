@@ -106,7 +106,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {            
         var interpretations : DNFFormula = [];
-        console.log("\n\nnew parse");
         switch(cmd.command){
             case "take":
                 var ents : string[] = getEntities(cmd.entity, state);
