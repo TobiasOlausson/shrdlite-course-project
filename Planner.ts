@@ -83,10 +83,17 @@ module Planner {
         //  - neighbour function
         //  - compare function
 
+        // start state
+        var start : WorldState = state;
+
         // A* planner (graph, start, goal, heuristics, timeout)
-        // var path = aStarSearch(null, null, null, null, timeout);
+        // var path = aStarSearch(null, start, isGoal, heuristics, timeout);
 
         return plan;
+    }
+
+    function heuristics(state : WorldState) : number {
+        return 0;
     }
 
     function isGoal(state : WorldState, interpretation : Interpreter.DNFFormula) : boolean {
@@ -105,18 +112,55 @@ module Planner {
 
     class StateGraph implements Graph<WorldState> {
 
-        /** Computes the edges that leave from a node. */
+        constructor(start : WorldState){}
+
+        /** Computes the edges that leave from a state. */
         outgoingEdges(state : WorldState) : Edge<WorldState>[] {
-            return null;
+            var edges : Edge<WorldState>[] = [];
+
+            ["l", "r", "p", "d"].forEach((action) => {
+                var nextState : WorldState = getNextState(action, state);
+                if(nextState != null)
+                    edges.push({
+                        from: state,
+                        to: nextState,
+                        cost: 1
+                    });
+            });
+
+            return edges;
         }
-        /** A function that compares nodes. */
+
+        /** A function that compares states. */
         //collections.ICompareFunction<WorldState>
-        compareNodes (state : WorldState) : number {
+        compareNodes (stateA : WorldState, stateB : WorldState) : number {
             return 0;
         }
-
     }
 
+    function getNextState(action : string, state : WorldState) : WorldState {
+        switch(action){
+            case "l":
+                if(state.arm > 0){
+                    return {stacks: state.stacks, holding: state.holding, 
+                        arm: state.arm - 1, objects: state.objects, examples: []};
+                }
+                break;
+            case "r":
+                if(state.arm < state.stacks.length){
+                    return {stacks: state.stacks, holding: state.holding, 
+                        arm: state.arm + 1, objects: state.objects, examples: []};
+                }
+                break;
+            case "p":
+                break;
+            case "d":
+                break;
+            default:
+                break;
+        }
+        return null;
+    }
 
     function toString(interpretation : Interpreter.DNFFormula) : string{
         var result : string = "";
