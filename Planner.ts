@@ -141,7 +141,15 @@ module Planner {
         /** A function that compares states. */
         //collections.ICompareFunction<WorldState>
         compareNodes (stateA : State, stateB : State) : number {
-            return 0;
+            var equalStacks : boolean = stateA.stacks == stateB.stacks;
+            var equalHolding : boolean = stateA.holding == stateB.holding;
+            var equalArms : boolean = stateA.arm == stateB.arm;
+            var equalActions : boolean = stateA.action == stateB.action;
+            if(equalStacks && equalHolding && equalArms && equalActions){
+                return 1;
+            }else{
+                return 0;
+            }
         }
     }
 
