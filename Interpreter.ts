@@ -286,7 +286,7 @@ module Interpreter {
             (objectDef.color == color || color == null);
     }
 
-    function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
+    export function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
         // console.log("constraints with obj1: " + obj1.form + " obj2: " + obj2.form);
         if(obj1.form == "floor") return false;
 
