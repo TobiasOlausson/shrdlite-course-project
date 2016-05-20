@@ -72,23 +72,29 @@ module Planner {
      var interpretation : Interpreter.DNFFormula = null;
 
     function planInterpretation(interpret : Interpreter.DNFFormula, state : WorldState) : string[] {
-        var timeout : number = 1000;
+        var timeout : number = 10000;
 
         var plan : string[] = [];
+        var cloneState : WorldState = clone(state);
 
-        objects = state.objects;
+        objects = cloneState.objects;
         interpretation = interpret;
 
         // heuristics
         // getHeuristics();
 
         // start state
-        var startState : State = new State(state.stacks, state.holding, state.arm, null);
+        
+
+        var startState : State = new State(cloneState.stacks, cloneState.holding, cloneState.arm, null);
 
         // A* planner (graph, startState, isGoal, heuristics, timeout)
         var path = aStarSearch(new StateGraph(), startState, isGoal, heuristics, timeout);
         path.path.forEach((steat) => {
-            plan.push(steat.action);
+            console.log("steat: " + steat.action);
+            if(steat.action != null)
+                plan.push(steat.action);
+            console.log("plan: " + plan);
         });
 
         return plan;
@@ -133,12 +139,13 @@ module Planner {
 
             ["l", "r", "p", "d"].forEach((action) => {
                 var nextState : State = getNextState(action, state);
-                if(nextState != null)
+                if(nextState != null){
                     edges.push({
                         from: state,
                         to: nextState,
                         cost: 1
                     });
+                }
             });
 
             return edges;
@@ -151,9 +158,9 @@ module Planner {
             var equalArms : boolean = stateA.arm == stateB.arm;
             var equalActions : boolean = stateA.action == stateB.action;
             if(equalStacks && equalHolding && equalArms && equalActions){
-                return 1;
-            }else{
                 return 0;
+            }else{
+                return -1;
             }
         }
     }
@@ -162,25 +169,38 @@ module Planner {
         switch(action){
             case "l":
                 if(state.arm > 0){
-                    return new State(state.stacks, state.holding, state.arm - 1, action);
+                    var newState = clone(state);
+                    return new State(newState.stacks, newState.holding, newState.arm - 1, action);
                 }
                 break;
             case "r":
-                if(state.arm < state.stacks.length){
-                    return new State(state.stacks, state.holding, state.arm + 1, action);
+                if(state.arm < state.stacks.length - 1){
+                    var newState = clone(state);
+                    return new State(newState.stacks, newState.holding, newState.arm + 1, action);
                 }
                 break;
             case "p":
                 if(state.holding == null){
-                    var tmp = state.stacks[state.arm].pop();
-                    return new State(state.stacks, tmp, state.arm, action);
+                    var newState = clone(state);
+                    if(newState.stacks[newState.arm].length > 0){
+                        var tmp = newState.stacks[newState.arm].pop();
+                        return new State(newState.stacks, tmp, newState.arm, action);
+                    }
                 }
                 break;
             case "d":
                 if(state.holding != null){
-                    var newState = new State(state.stacks, state.holding, state.arm, action);
-                    var below : string = newState.stacks[newState.arm][newState.stacks[newState.arm].length];
-                    var belowObject : Parser.Object = objects[below];
+                    var newState = clone(state);//new State(state.stacks, state.holding, state.arm, action);
+                    var belowObject : Parser.Object;
+
+                    var x = newState.arm;
+                    var y = newState.stacks[x].length;
+
+                    if(newState.stacks[x][y] != null){
+                        var below : string = newState.stacks[x][y];
+                        belowObject= objects[below];
+                    } else 
+                        belowObject = {  "form":"floor",   "size":"",  "color":"" };
 
                     var ontopObject : Parser.Object = objects[newState.holding];
 
@@ -195,6 +215,10 @@ module Planner {
                 break;
         }
         return null;
+    }
+
+    function clone<T>(obj: T): T {
+        return JSON.parse(JSON.stringify(obj));
     }
 
     function toString(interpretation : Interpreter.DNFFormula) : string{
