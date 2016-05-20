@@ -28,8 +28,9 @@ module Planner {
             try {
                 var result : PlannerResult = <PlannerResult>interpretation;
                 result.plan = planInterpretation(result.interpretation, currentState);
-                result.plan.push("new interpretation");
-                result.plan.push(toString(result.interpretation));
+                // result.plan.push("new interpretation");
+                // result.plan.push(toString(result.interpretation));
+
                 if (result.plan.length == 0) {
                     result.plan.push("That is already true!");
                 }
@@ -68,13 +69,15 @@ module Planner {
      */
 
      var objects : {[s:string]: ObjectDefinition;} = null;
+     var interpretation : Interpreter.DNFFormula = null;
 
-    function planInterpretation(interpretation : Interpreter.DNFFormula, state : WorldState) : string[] {
+    function planInterpretation(interpret : Interpreter.DNFFormula, state : WorldState) : string[] {
         var timeout : number = 1000;
 
         var plan : string[] = [];
 
         objects = state.objects;
+        interpretation = interpret;
 
         // heuristics
         // getHeuristics();
@@ -83,7 +86,10 @@ module Planner {
         var startState : State = new State(state.stacks, state.holding, state.arm, null);
 
         // A* planner (graph, startState, isGoal, heuristics, timeout)
-        // var path = aStarSearch(null, start, isGoal, heuristics, timeout);
+        var path = aStarSearch(new StateGraph(), startState, isGoal, heuristics, timeout);
+        path.path.forEach((steat) => {
+            plan.push(steat.action);
+        });
 
         return plan;
     }
@@ -92,7 +98,7 @@ module Planner {
         return 0;
     }
 
-    function isGoal(state : WorldState, interpretation : Interpreter.DNFFormula) : boolean {
+    function isGoal(state : State) : boolean {
         var res = interpretation.some(function (interp) {
             return interp.every(function (literal) {
                 if(literal.relation == "holding"){
@@ -119,7 +125,7 @@ module Planner {
 
     class StateGraph implements Graph<State> {
 
-        constructor(start : State){}
+        constructor(){}
 
         /** Computes the edges that leave from a state. */
         outgoingEdges(state : State) : Edge<State>[] {
@@ -139,7 +145,6 @@ module Planner {
         }
 
         /** A function that compares states. */
-        //collections.ICompareFunction<WorldState>
         compareNodes (stateA : State, stateB : State) : number {
             var equalStacks : boolean = stateA.stacks == stateB.stacks;
             var equalHolding : boolean = stateA.holding == stateB.holding;
