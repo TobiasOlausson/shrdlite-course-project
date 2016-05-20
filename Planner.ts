@@ -84,7 +84,7 @@ module Planner {
         //  - compare function
 
         // start state
-        var start : WorldState = state;
+        var startState : State = new State(state.stacks, state.holding, state.arm, null);
 
         // A* planner (graph, start, goal, heuristics, timeout)
         // var path = aStarSearch(null, start, isGoal, heuristics, timeout);
@@ -110,16 +110,27 @@ module Planner {
         return res;
     }
 
-    class StateGraph implements Graph<WorldState> {
+    class State {
 
-        constructor(start : WorldState){}
+        constructor(
+            public stacks : Stack[], 
+            public holding : string, 
+            public arm: number, 
+            public action :string
+        ){}
+
+    }
+
+    class StateGraph implements Graph<State> {
+
+        constructor(start : State){}
 
         /** Computes the edges that leave from a state. */
-        outgoingEdges(state : WorldState) : Edge<WorldState>[] {
-            var edges : Edge<WorldState>[] = [];
+        outgoingEdges(state : State) : Edge<State>[] {
+            var edges : Edge<State>[] = [];
 
             ["l", "r", "p", "d"].forEach((action) => {
-                var nextState : WorldState = getNextState(action, state);
+                var nextState : State = getNextState(action, state);
                 if(nextState != null)
                     edges.push({
                         from: state,
@@ -133,26 +144,28 @@ module Planner {
 
         /** A function that compares states. */
         //collections.ICompareFunction<WorldState>
-        compareNodes (stateA : WorldState, stateB : WorldState) : number {
+        compareNodes (stateA : State, stateB : State) : number {
             return 0;
         }
     }
 
-    function getNextState(action : string, state : WorldState) : WorldState {
+    function getNextState(action : string, state : State) : State {
         switch(action){
             case "l":
                 if(state.arm > 0){
-                    return {stacks: state.stacks, holding: state.holding, 
-                        arm: state.arm - 1, objects: state.objects, examples: []};
+                    return new State(state.stacks, state.holding, state.arm - 1, action);
                 }
                 break;
             case "r":
                 if(state.arm < state.stacks.length){
-                    return {stacks: state.stacks, holding: state.holding, 
-                        arm: state.arm + 1, objects: state.objects, examples: []};
+                    return new State(state.stacks, state.holding, state.arm + 1, action);
                 }
                 break;
             case "p":
+                if(state.holding == null){
+                    var tmp = state.stacks[state.arm].pop();
+                    return new State(state.stacks, tmp, state.arm, action);
+                }
                 break;
             case "d":
                 break;
