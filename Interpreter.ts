@@ -288,7 +288,7 @@ module Interpreter {
 
     function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
         // console.log("constraints with obj1: " + obj1.form + " obj2: " + obj2.form);
-        if(obj1 == "floor") return false;
+        if(obj1.form == "floor") return false;
 
         // shouldnt be needed, check elsewhere
         if(obj1 == obj2)
