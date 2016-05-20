@@ -66,33 +66,29 @@ module Planner {
      * actions for the robot to perform, encoded as "l", "r", "p", or
      * "d".
      */
+
+     var objects : {[s:string]: ObjectDefinition;} = null;
+
     function planInterpretation(interpretation : Interpreter.DNFFormula, state : WorldState) : string[] {
         var timeout : number = 1000;
 
-        var objects = state.objects;
-
         var plan : string[] = [];
+
+        objects = state.objects;
 
         // heuristics
         // getHeuristics();
 
-        // define a goal state
-        // var goal = ;
-
-        // create graph
-        //  - neighbour function
-        //  - compare function
-
         // start state
         var startState : State = new State(state.stacks, state.holding, state.arm, null);
 
-        // A* planner (graph, start, goal, heuristics, timeout)
+        // A* planner (graph, startState, isGoal, heuristics, timeout)
         // var path = aStarSearch(null, start, isGoal, heuristics, timeout);
 
         return plan;
     }
 
-    function heuristics(state : WorldState) : number {
+    function heuristics(state : State) : number {
         return 0;
     }
 
@@ -168,6 +164,19 @@ module Planner {
                 }
                 break;
             case "d":
+                if(state.holding != null){
+                    var newState = new State(state.stacks, state.holding, state.arm, action);
+                    var below : string = newState.stacks[newState.arm][newState.stacks[newState.arm].length];
+                    var belowObject : Parser.Object = objects[below];
+
+                    var ontopObject : Parser.Object = objects[newState.holding];
+
+                    if(Interpreter.constraints(ontopObject, belowObject, "ontop")
+                        || Interpreter.constraints(ontopObject, belowObject, "inside")){
+                        newState.stacks[newState.arm].push(newState.holding);
+                        return newState;
+                    }
+                }
                 break;
             default:
                 break;
