@@ -1,5 +1,6 @@
 ///<reference path="World.ts"/>
 ///<reference path="Interpreter.ts"/>
+///<reference path="Graph.ts"/>
 
 /** 
 * Planner module
@@ -8,8 +9,6 @@
 * produced by the Interpreter module and to plan a sequence of actions
 * for the robot to put the world into a state compatible with the
 * user's command, i.e. to achieve what the user wanted.
-*
-* The planner should use your A* search implementation to find a plan.
 */
 module Planner {
 
@@ -29,6 +28,8 @@ module Planner {
             try {
                 var result : PlannerResult = <PlannerResult>interpretation;
                 result.plan = planInterpretation(result.interpretation, currentState);
+                result.plan.push("new interpretation");
+                result.plan.push(toString(result.interpretation));
                 if (result.plan.length == 0) {
                     result.plan.push("That is already true!");
                 }
@@ -57,67 +58,71 @@ module Planner {
     // private functions
 
     /**
-     * The core planner function. The code here is just a template;
-     * you should rewrite this function entirely. In this template,
-     * the code produces a dummy plan which is not connected to the
-     * argument `interpretation`, but your version of the function
-     * should be such that the resulting plan depends on
-     * `interpretation`.
-     *
-     * 
      * @param interpretation The logical interpretation of the user's desired goal. The plan needs to be such that by executing it, the world is put into a state that satisfies this goal.
      * @param state The current world state.
      * @returns Basically, a plan is a
      * stack of strings, which are either system utterances that
      * explain what the robot is doing (e.g. "Moving left") or actual
      * actions for the robot to perform, encoded as "l", "r", "p", or
-     * "d". The code shows how to build a plan. Each step of the plan can
-     * be added using the `push` method.
+     * "d".
      */
     function planInterpretation(interpretation : Interpreter.DNFFormula, state : WorldState) : string[] {
-        // This function returns a dummy plan involving a random stack
-        do {
-            var pickstack = Math.floor(Math.random() * state.stacks.length);
-        } while (state.stacks[pickstack].length == 0);
+        var timeout : number = 1000;
+
+        var objects = state.objects;
+
         var plan : string[] = [];
 
-        // First move the arm to the leftmost nonempty stack
-        if (pickstack < state.arm) {
-            plan.push("Moving left");
-            for (var i = state.arm; i > pickstack; i--) {
-                plan.push("l");
-            }
-        } else if (pickstack > state.arm) {
-            plan.push("Moving right");
-            for (var i = state.arm; i < pickstack; i++) {
-                plan.push("r");
-            }
-        }
+        // heuristics
+        // getHeuristics();
 
-        // Then pick up the object
-        var obj = state.stacks[pickstack][state.stacks[pickstack].length-1];
-        plan.push("Picking up the " + state.objects[obj].form,
-                  "p");
+        // define a goal state
+        // var goal = ;
 
-        if (pickstack < state.stacks.length-1) {
-            // Then move to the rightmost stack
-            plan.push("Moving as far right as possible");
-            for (var i = pickstack; i < state.stacks.length-1; i++) {
-                plan.push("r");
-            }
+        // create graph
+        //  - neighbour function
+        //  - compare function
 
-            // Then move back
-            plan.push("Moving back");
-            for (var i = state.stacks.length-1; i > pickstack; i--) {
-                plan.push("l");
-            }
-        }
-
-        // Finally put it down again
-        plan.push("Dropping the " + state.objects[obj].form,
-                  "d");
+        // A* planner (graph, start, goal, heuristics, timeout)
+        // var path = aStarSearch(null, null, null, null, timeout);
 
         return plan;
+    }
+
+    function isGoal(state : WorldState, interpretation : Interpreter.InterpretationResult) : boolean {
+        return true;
+    }
+
+    class StateGraph implements Graph<WorldState> {
+
+        /** Computes the edges that leave from a node. */
+        outgoingEdges(state : WorldState) : Edge<WorldState>[] {
+            return null;
+        }
+        /** A function that compares nodes. */
+        //collections.ICompareFunction<WorldState>
+        compareNodes (state : WorldState) : number {
+            return 0;
+        }
+
+    }
+
+
+    function toString(interpretation : Interpreter.DNFFormula) : string{
+        var result : string = "";
+
+        for(var i = 0; i < interpretation.length; i++){
+            for(var j = 0; j < interpretation[i].length; j++){
+                result = result.concat(interpretation[i][j].relation + "(");
+                for(var k = 0; k < interpretation[i][j].args.length; k++){
+                    result = result.concat(interpretation[i][j].args[k]);
+                    if(k + 1  < interpretation[i][j].args.length)
+                        result = result.concat(", ");
+                }
+                result = result.concat(")    ")
+            }
+        }
+        return result;
     }
 
 }
