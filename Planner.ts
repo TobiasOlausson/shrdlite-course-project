@@ -89,8 +89,18 @@ module Planner {
         return plan;
     }
 
-    function isGoal(state : WorldState, interpretation : Interpreter.InterpretationResult) : boolean {
-        return true;
+    function isGoal(state : WorldState, interpretation : Interpreter.DNFFormula) : boolean {
+        var res = interpretation.some(function (interp) {
+            return interp.every(function (literal) {
+                if(literal.relation == "holding"){
+                    return (literal.args[0] == state.holding);
+                }else{
+                    //TODO probably call relationcheck 
+                    return true;
+                }
+            });
+        });
+        return res;
     }
 
     class StateGraph implements Graph<WorldState> {
