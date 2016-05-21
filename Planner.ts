@@ -91,10 +91,8 @@ module Planner {
         // A* planner (graph, startState, isGoal, heuristics, timeout)
         var path = aStarSearch(new StateGraph(), startState, isGoal, heuristics, timeout);
         path.path.forEach((steat) => {
-            console.log("steat: " + steat.action);
             if(steat.action != null)
                 plan.push(steat.action);
-            console.log("plan: " + plan);
         });
 
         return plan;
@@ -110,7 +108,6 @@ module Planner {
                 if(literal.relation == "holding"){
                     return (literal.args[0] == state.holding);
                 }else{
-                    //TODO probably call relationcheck 
                     return true;
                 }
             });
@@ -136,7 +133,6 @@ module Planner {
         /** Computes the edges that leave from a state. */
         outgoingEdges(state : State) : Edge<State>[] {
             var edges : Edge<State>[] = [];
-
             ["l", "r", "p", "d"].forEach((action) => {
                 var nextState : State = getNextState(action, state);
                 if(nextState != null){
@@ -166,49 +162,56 @@ module Planner {
     }
 
     function getNextState(action : string, state : State) : State {
+        var newState = clone(state);
+        
         switch(action){
             case "l":
                 if(state.arm > 0){
-                    var newState = clone(state);
                     return new State(newState.stacks, newState.holding, newState.arm - 1, action);
                 }
                 break;
             case "r":
                 if(state.arm < state.stacks.length - 1){
-                    var newState = clone(state);
                     return new State(newState.stacks, newState.holding, newState.arm + 1, action);
                 }
                 break;
             case "p":
                 if(state.holding == null){
-                    var newState = clone(state);
-                    if(newState.stacks[newState.arm].length > 0){
-                        var tmp = newState.stacks[newState.arm].pop();
+                    var x = newState.arm;
+
+                    if(newState.stacks[x].length > 0){
+                        var tmp = newState.stacks[x].pop();
                         return new State(newState.stacks, tmp, newState.arm, action);
                     }
                 }
                 break;
             case "d":
                 if(state.holding != null){
-                    var newState = clone(state);//new State(state.stacks, state.holding, state.arm, action);
-                    var belowObject : Parser.Object;
-
                     var x = newState.arm;
-                    var y = newState.stacks[x].length;
+                    var length = newState.stacks[x].length;
+                    var y = length - 1;
 
-                    if(newState.stacks[x][y] != null){
+                    if(y > 1){
                         var below : string = newState.stacks[x][y];
-                        belowObject= objects[below];
-                    } else 
-                        belowObject = {  "form":"floor",   "size":"",  "color":"" };
+                        var belowObject : Parser.Object = objects[below];
+                        var ontopObject : Parser.Object = objects[newState.holding];
 
-                    var ontopObject : Parser.Object = objects[newState.holding];
+                        if(Interpreter.constraints(ontopObject, belowObject, "ontop")
+                            || Interpreter.constraints(ontopObject, belowObject, "inside")){
+                            newState.stacks[x].push(newState.holding);
+                            newState.holding = null;
+                            newState.action = action;
+                            return newState;
+                        }
+                    } else {
+                        newState.stacks[x].push(newState.holding);
+                        newState.holding = null;
+                        newState.action = action;
 
-                    if(Interpreter.constraints(ontopObject, belowObject, "ontop")
-                        || Interpreter.constraints(ontopObject, belowObject, "inside")){
-                        newState.stacks[newState.arm].push(newState.holding);
                         return newState;
                     }
+
+
                 }
                 break;
             default:
