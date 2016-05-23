@@ -111,8 +111,16 @@ module Planner {
                         var numAbove2 = objectsAbove(literal.args[1], state);
                         var armDist1 = armDistance(literal.args[0], state);
                         var armDist2 = armDistance(literal.args[1], state);
-
-                        var nearest = Math.min(armDist1, armDist2); 
+                        var nearest : number = 0;
+                        if(numAbove1 == 0 && numAbove2 > 0){
+                            nearest = armDist2;
+                        }else if(numAbove2 == 0 && numAbove1 > 0){
+                            nearest = armDist1;
+                        }else if(numAbove1 == 0 && numAbove2 ==0){
+                            nearest = armDist1;
+                        }else{
+                            nearest = Math.min(armDist1, armDist2); 
+                        }
 
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
