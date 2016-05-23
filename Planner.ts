@@ -100,6 +100,10 @@ module Planner {
         interpretation.forEach((conj) => {
             conj.forEach((literal) =>{
 
+                if(isGoal(state)){
+                    result = 0;
+                    return;
+                }
                 switch(literal.relation){
                     case "holding":
                         numAbove = objectsAbove(literal.args[0], state);
@@ -124,7 +128,7 @@ module Planner {
 
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
-                        result = nearest + dist + (numAbove1 +numAbove2)*3 + 2 ;
+                        result = nearest + dist + (numAbove1 + numAbove2)*3 + 2 ;
 
                         if((numAbove2 > 0) && state.holding != null){
                             result += 1;
