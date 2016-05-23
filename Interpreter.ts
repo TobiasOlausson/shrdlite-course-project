@@ -313,22 +313,24 @@ module Interpreter {
                     return obj2.form == "floor";
                 }
 
-                if(obj2.size == "small"){
-                    if(obj1.size == "small")
-                        return !(obj1.form == "ball" && obj2.form == "box");
-                    else
-                        return !(obj1.form == "table" && 
-                            (obj2.form == "box" || 
-                                obj2.form == "brick" || 
-                                obj2.form == "pyramid"));
+                // a box can not be put ontop of a box
+                if(obj1.form == "box" && obj2.form == "box")
+                    return false;
+
+                // cant put a large table ontop some small objects
+                if(obj1.size == "large" && obj2.size == "small"){
+                    return !(obj1.form == "table" && (obj2.form == "box" 
+                        || obj2.form == "brick" || obj2.form == "pyramid"));
+
+                // cant put a small object ontop a large box
+                } else if(obj1.size == "small" && obj2.size == "large" && obj2.form == "box"){
+                    return false;
+
+                // only certain objects can be placed ontop of a large box
+                } else if(obj1.size == "large" && obj2.size == "large" && obj2.form == "box"){
+                    return obj1.form != "table" && obj1.form != "plank" && obj1.form != "pyramid";
+
                 } else {
-                    if(obj2.form == "box"){
-                        if(obj1.size == "small")
-                            return false;
-                        else
-                            return obj1.form != "table" && obj1.form != "plank" 
-                                && obj1.form != "pyramid";
-                    }
                     return true;
                 }
             case "above":
