@@ -70,12 +70,14 @@ module Planner {
 
      var objects : {[s:string]: ObjectDefinition;} = null;
      var interpretation : Interpreter.DNFFormula = null;
+     var initialWorld : WorldState = null;
 
     function planInterpretation(interpret : Interpreter.DNFFormula, state : WorldState) : string[] {
         var timeout : number = 10000;
 
         var plan : string[] = [];
         var cloneState : WorldState = clone(state);
+        initialWorld = state;
 
         objects = cloneState.objects;
         interpretation = interpret;
@@ -99,11 +101,25 @@ module Planner {
     function isGoal(state : State) : boolean {
         var res = interpretation.some(function (interp) {
             return interp.every(function (literal) {
-                if(literal.relation == "holding"){
-                    return (literal.args[0] == state.holding);
-                }else{
-                    console.log("no es bueno!");
-                    return true;
+                switch(literal.relation){
+                    case "holding":
+                        return (literal.args[0] == state.holding);
+                    case "inside":
+                    case "above":
+                    case "beside":
+                    case "leftof":
+                    case "rightof":
+                    case "ontop":
+                        var worldState : WorldState = clone(initialWorld);
+                        worldState.arm = state.arm;
+                        worldState.stacks = state.stacks;
+                        worldState.holding = state.holding;
+                        worldState.objects = objects;
+
+                        return Interpreter.relationCheck(literal.args[0], 
+                            literal.args[1], literal.relation, worldState);
+                    default:
+                        return false;
                 }
             });
         });
