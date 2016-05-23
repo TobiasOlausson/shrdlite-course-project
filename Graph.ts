@@ -99,6 +99,8 @@ function aStarSearch<Node> (
       result.path.push(first.current);
       while(true){
         for(var n = 0; n < closedSetNode.length; n++){
+          if(next.parent == null)
+            return result;
           if(graph.compareNodes(closedSetNode[n].current, next.parent) == 0){
             next = closedSetNode[n];
             result.path.unshift(next.current);
@@ -121,6 +123,7 @@ function aStarSearch<Node> (
           (Object1.cost + heuristics(Object1.current)) <= 
             (adjEdges[i].cost + first.cost + heuristics(adjEdges[i].to))){
           inOpen = true;
+          return;
         }
       });
 
