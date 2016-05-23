@@ -94,21 +94,63 @@ module Planner {
     }
 
     function heuristics(state : State) : number {
+        var result : number = 0;
         var numAbove : number = 0;
         var armDist : number = 0;
         interpretation.forEach((conj) => {
-            conj.forEach((literal) =>{ 
-                if(literal.relation == "holding"){
-                    numAbove = objectsAbove(literal.args[0], state);
-                    armDist = armDistance(literal.args[0], state);
-                    return;
+            conj.forEach((literal) =>{
+
+                switch(literal.relation){
+                    case "holding":
+                        numAbove = objectsAbove(literal.args[0], state);
+                        armDist = armDistance(literal.args[0], state);
+                        result = armDist + numAbove*4 + 1;
+                        return;
+                    case "ontop":
+                        var numAbove1 = objectsAbove(literal.args[0], state);
+                        var numAbove2 = objectsAbove(literal.args[1], state);
+                        var armDist1 = armDistance(literal.args[0], state);
+                        var armDist2 = armDistance(literal.args[1], state);
+
+                        var nearest = Math.min(armDist1, armDist2); 
+
+                        var dist : number = distBetween(literal.args[0], literal.args[1], state);
+
+                        result = nearest + dist + (numAbove1 +numAbove2) *4 + 2 ;
+                        return;
+                    default: 
+                        result = 0;
+                        return;
+
                 }
             });
         });
-        return armDist + numAbove*4 + 2 ;
+        return result;
     }
 
-    function armDistance(object :string, state: State) : number {
+    function distBetween(object1 : string, object2 : string, state: State) : number{
+        var index1 : number = -1;
+        var index2 : number = -1;
+        var result : number = 0;
+        state.stacks.forEach((stack) => {
+            if(stack.indexOf(object1) != -1){
+                index1 = Math.abs(state.arm - state.stacks.indexOf(stack));
+            }else if(stack.indexOf(object2) != -1){
+                index2 = Math.abs(state.arm - state.stacks.indexOf(stack));
+
+            }
+            if(index1 != -1 && index2 != -1){
+                return;
+            }
+        });
+        if(index1 != -1 && index2 != -1){
+            result = Math.abs(index1-index2);
+        }
+        return result;
+
+    }
+
+    function armDistance(object : string, state: State) : number {
         var result : number = 0;
         state.stacks.forEach((stack) => {
             if(stack.indexOf(object) != -1){
