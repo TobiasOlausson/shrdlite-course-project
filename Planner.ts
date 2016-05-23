@@ -80,25 +80,19 @@ module Planner {
         objects = cloneState.objects;
         interpretation = interpret;
 
-        // heuristics
-        // getHeuristics();
-
-        // start state
-        
-
         var startState : State = new State(cloneState.stacks, cloneState.holding, cloneState.arm, null);
 
-        // A* planner (graph, startState, isGoal, heuristics, timeout)
         var path = aStarSearch(new StateGraph(), startState, isGoal, heuristics, timeout);
-        path.path.forEach((steat) => {
-            if(steat.action != null)
-                plan.push(steat.action);
+        path.path.forEach((s) => {
+            if(s.action != null)
+                plan.push(s.action);
         });
 
         return plan;
     }
 
     function heuristics(state : State) : number {
+        // TODO: implement
         return 0;
     }
 
@@ -108,6 +102,7 @@ module Planner {
                 if(literal.relation == "holding"){
                     return (literal.args[0] == state.holding);
                 }else{
+                    console.log("no es bueno!");
                     return true;
                 }
             });
@@ -124,6 +119,19 @@ module Planner {
             public action :string
         ){}
 
+
+
+        toString() : string {
+            return ("Arm: " + this.arm + 
+            " | Holding: " + this.holding + 
+            " | Action: " + this.action + 
+            " | Stacks: " +
+            this.stacks[0] +":"+
+            this.stacks[1] +":"+
+            this.stacks[2] +":"+
+            this.stacks[3] +":"+
+            this.stacks[4]);
+        }
     }
 
     class StateGraph implements Graph<State> {
@@ -156,7 +164,7 @@ module Planner {
             if(equalStacks && equalHolding && equalArms && equalActions){
                 return 0;
             }else{
-                return -1;
+                return 1;
             }
         }
     }
@@ -187,11 +195,14 @@ module Planner {
                 break;
             case "d":
                 if(state.holding != null){
+                    // state of the arm
                     var x = newState.arm;
+                    // length of the stack at arms position
                     var length = newState.stacks[x].length;
+                    // y value of the object to be checked at stack x
                     var y = length - 1;
 
-                    if(y > 1){
+                    if(length > 0){
                         var below : string = newState.stacks[x][y];
                         var belowObject : Parser.Object = objects[below];
                         var ontopObject : Parser.Object = objects[newState.holding];
@@ -223,22 +234,4 @@ module Planner {
     function clone<T>(obj: T): T {
         return JSON.parse(JSON.stringify(obj));
     }
-
-    function toString(interpretation : Interpreter.DNFFormula) : string{
-        var result : string = "";
-
-        for(var i = 0; i < interpretation.length; i++){
-            for(var j = 0; j < interpretation[i].length; j++){
-                result = result.concat(interpretation[i][j].relation + "(");
-                for(var k = 0; k < interpretation[i][j].args.length; k++){
-                    result = result.concat(interpretation[i][j].args[k]);
-                    if(k + 1  < interpretation[i][j].args.length)
-                        result = result.concat(", ");
-                }
-                result = result.concat(")    ")
-            }
-        }
-        return result;
-    }
-
 }
