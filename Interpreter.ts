@@ -118,7 +118,7 @@ module Interpreter {
                 break;
             case "move":
                 var ents : string[] = getEntities(cmd.entity, state);
-                var destEnts = getEntities(cmd.location.entity, state);
+                var destEnts : string[] = getEntities(cmd.location.entity, state);
                 ents.forEach((ent) => {
                     var obj = getWorldObject(ent, state);
 
@@ -161,31 +161,24 @@ module Interpreter {
 
         //TODO handle quantifiers
         var result : string[] = getObjects(entity.object, state);
-        // console.log("getEntities just got from getObjects: " + result);
         return result;
     }
     function getObjects(obj : Parser.Object, state : WorldState) : string[] {
         if(obj.location == null){
             return withDescription(obj, state);
         }else{
-            // console.log("about to call locationCheck");
             var result : string[] = locationCheck(getObjects(obj.object, state), obj.location.relation, getEntities(obj.location.entity, state), state);
-            // console.log("just got from locationCheck: " + result);
             return result;
         }
     }
 
     function locationCheck(objectStrings : string[], relation : string, locObjStrings : string[], state : WorldState): string[] {
-        // console.log("at start of locationCheck");
         var result : string[] = [];
 
         objectStrings.forEach((objStr) => {
-                var objDef = getWorldObject(objStr, state);
 
                 locObjStrings.forEach((locStr) => {
-                    var locObj = getWorldObject(locStr, state);
-
-                    if(relationCheck(objDef, locObj, relation, state)) {
+                    if(relationCheck(objStr, locStr, relation, state)) {
                         if(result.indexOf(objStr) == -1){
                             result.push(objStr);
                         } 
@@ -202,7 +195,7 @@ module Interpreter {
         return objectStrings;
     }
 
-    function getWorldObject (objectString : string, state : WorldState) : ObjectDefinition {
+    export function getWorldObject (objectString : string, state : WorldState) : ObjectDefinition {
         var objects = state.objects;
 
         if(objectString == "floor")
@@ -226,14 +219,12 @@ module Interpreter {
         return result;
     }
 
-    function relationCheck (obj1 : Parser.Object, obj2 : Parser.Object, relation : string, state : WorldState) : boolean {
-        var objects = state.objects;
-
+    export function relationCheck (obj1 : string, obj2 : string, relation : string, state : WorldState) : boolean {
         if(obj1 == obj2){
             return false;
         }
 
-        if(obj1.form == "floor") return false;
+        if(obj1 == "floor") return false;
 
         var obj1X : number = Infinity;
         var obj2X : number = Infinity;
@@ -242,18 +233,18 @@ module Interpreter {
         // find indices of obj1 and obj2
         for(var x : number = 0; x < state.stacks.length; x++){
             for(var y : number = 0; y < state.stacks[x].length; y++){
-                if(objects[state.stacks[x][y]] == obj2){
+                if(state.stacks[x][y] == obj2){
                     obj2X = x;
                     obj2Y = y;
                 }
 
-                if(objects[state.stacks[x][y]] == obj1){
+                if(state.stacks[x][y] == obj1){
                     obj1X = x;
                     obj1Y = y;
                 }
             }
         }
-        if(obj2.form == "floor"){
+        if(obj2 == "floor"){
             obj2Y = -1;
             obj2X = obj1X;
         }
@@ -263,7 +254,8 @@ module Interpreter {
 
         switch(relation){
             case "inside":
-                return constraints(obj1, obj2, "inside") && obj1X == obj2X && 
+                return constraints(getWorldObject(obj1,state), 
+                    getWorldObject(obj2, state), "inside") && obj1X == obj2X && 
                     obj1Y == obj2Y + 1;
             case "ontop":
                 return obj1X == obj2X && obj1Y == obj2Y + 1;
@@ -287,7 +279,6 @@ module Interpreter {
     }
 
     export function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
-        // console.log("constraints with obj1: " + obj1.form + " obj2: " + obj2.form);
         if(obj1.form == "floor") return false;
 
         // shouldnt be needed, check elsewhere
