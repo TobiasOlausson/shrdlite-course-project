@@ -8,33 +8,33 @@
 
 /** An edge in a graph. */
 class Edge<Node> {
-  from : Node;
-  to   : Node;
-  cost : number;
+    from: Node;
+    to: Node;
+    cost: number;
 }
 
 /** A directed graph. */
 interface Graph<Node> {
-  /** Computes the edges that leave from a node. */
-  outgoingEdges(node : Node) : Edge<Node>[];
-  /** A function that compares nodes. */
-  compareNodes : collections.ICompareFunction<Node>;
+    /** Computes the edges that leave from a node. */
+    outgoingEdges(node: Node): Edge<Node>[];
+    /** A function that compares nodes. */
+    compareNodes: collections.ICompareFunction<Node>;
 }
 
 /** Type that reports the result of a search. */
 class SearchResult<Node> {
-  /** The path (sequence of Nodes) found by the search algorithm. */
-  path : Node[];
-  /** The total cost of the path. */
-  cost : number;
+    /** The path (sequence of Nodes) found by the search algorithm. */
+    path: Node[];
+    /** The total cost of the path. */
+    cost: number;
 }
 
 /** Type stored in the priority queue. Keeps track of its parent
     in order to reconstruct the path.*/
-class StoredNode<Node> {
-  parent : Node;
-  current : Node;
-  cost : number;
+class QueueNode<Node> {
+    parent: QueueNode<Node>;
+    node: Node;
+    cost: number;
 }
 
 /**
@@ -46,105 +46,106 @@ class StoredNode<Node> {
 * @param timeout Maximum time (in seconds) to spend performing A\* search.
 * @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
 */
-function aStarSearch<Node> (
-  graph : Graph<Node>,
-  start : Node,
-  goal : (n:Node) => boolean,
-  heuristics : (n:Node) => number,
-  timeout : number
-  ) : SearchResult<Node> {
-  var pQueue = new collections.PriorityQueue<StoredNode<Node>>(
-    function(Object1, Object2){
-        return (Object2.cost + heuristics(Object2.current)) -
-        (Object1.cost + heuristics(Object1.current))
-    }
-  );
 
-  var result : SearchResult<Node> = {
-    path: [],
-    cost: 0
-  };
+function aStarSearch<Node>(graph: Graph<Node>,
+    start: Node,
+    goal: (n: Node) => boolean,
+    heuristics: (n: Node) => number,
+    timeout: number): SearchResult<Node> {
 
-  //Used to check for timeout (timeout : number)
-  var startTime : number = Date.now();
+    //Used to check for timeout (timeout : number)
+    var startTime: number = Date.now();
 
-  //Initial queue edges
-  var tmp : StoredNode<Node> = {
-    parent: undefined,
-    current: start,
-    cost: 0
-  };
-  pQueue.enqueue(tmp);
-
-
-  //Used to store the node with the lowest f value
-  var closedSetNode : StoredNode<Node>[] = [];
-  closedSetNode.push(tmp);
-
-  //Iteration
-  while(!pQueue.isEmpty()) {
-    // Check for timeout, return empty result
-    if(Date.now() - startTime >= (timeout*1000)){
-      return result;
-    }
-
-    // First element in priority queue
-    var first : StoredNode<Node> = pQueue.dequeue();
-    closedSetNode.push(first);
-
-    // Goal found, reconstruct path
-    if (goal(first.current)) {
-      var next : StoredNode<Node> = first;
-      result.cost += first.cost;
-      result.path.push(first.current);
-      while(true){
-        for(var n = 0; n < closedSetNode.length; n++){
-          if(graph.compareNodes(closedSetNode[n].current, next.parent) == 0){
-            next = closedSetNode[n];
-            result.path.unshift(next.current);
-            if(next.parent == undefined)
-              return result;
-          }
+    // Priority queue for keeping track of paths to the nodes in the graph
+    var queue = new collections.PriorityQueue<QueueNode<Node>>(
+        // The comparator function
+        function (Object1, Object2) {
+            return (Object2.cost + heuristics(Object2.node)) -
+                (Object1.cost + heuristics(Object1.node))
         }
-      }
+    );
+
+    // Initiate the result to an empty path and zero cost
+    var result: SearchResult<Node> = {
+        path: [],
+        cost: 0
+    };
+
+    //Initial queue edges
+    var startNode: QueueNode<Node> = {
+        parent: undefined,
+        node: start,
+        cost: 0
+    };
+    queue.enqueue(startNode);
+
+    // Used to store nodes to which the shortest path has already been found
+    // Uses as binary search tree to be able to find if nodes are in the set
+    // in O(log n)
+    var closedSet: collections.BSTree<Node> = new collections.BSTree<Node>(graph.compareNodes);
+    closedSet.add(startNode.node);
+
+    //Iteration
+    while ((Date.now() - startTime < (timeout * 1000)) && (!queue.isEmpty())) {
+
+        // First element in priority queue
+        var current: QueueNode<Node> = queue.dequeue();
+        closedSet.add(current.node);
+
+        // Goal found, reconstruct path
+        if (goal(current.node)) {
+            var prev: QueueNode<Node> = current;
+            result.cost += current.cost;
+            result.path.push(current.node);
+            while (prev.parent != undefined) {
+                prev = prev.parent;
+                result.path.push(prev.node);
+            }
+            // Saves about 0.00000001s over using unshift. 
+            result.path.reverse();
+            return result;
+        }
+
+        //Add neighbouring edges to queue
+        var adjEdges: Edge<Node>[] = graph.outgoingEdges(current.node);
+        for (var edge of adjEdges) {
+
+            // Neater code with these predefined!
+            var targetNode: Node = edge.to;
+            var shorterPathExists: boolean = false;
+            var accumCost = edge.cost + current.cost;
+
+            // We do not have to look in the queue at all if the node already is in the closed set
+            if (!closedSet.contains(targetNode)) {
+
+                // Look if the target node is in the set, with a lower cost, by comparing with all
+                // nodes in the queue
+                queue.forEach(function (searchNode) {
+                    if (graph.compareNodes(searchNode.node, targetNode) == 0) {
+                        if ((accumCost + heuristics(searchNode.node)) >= (searchNode.cost + heuristics(searchNode.node))) {
+                            shorterPathExists = true;
+
+                            // It is only safe to break the iteration if we have found a path in the queue
+                            // with lower cost than the current path. There could be several paths in the queue
+                            // and we cannot break if we have only found a path with higher cost.
+                            return false; 
+                        }
+                    }
+                });
+
+                // If there is no shorter path in the queue, add the newly found one
+                if (!shorterPathExists) {
+                    var newNode: QueueNode<Node> = {
+                        parent: current,
+                        node: targetNode,
+                        cost: accumCost
+                    };
+                    queue.enqueue(newNode);
+                }
+            } 
+        }
     }
 
-    //Add neighbouring edges to queue
-    var adjEdges : Edge<Node>[] = 
-      graph.outgoingEdges(first.current);
-    for(var i = 0; i < adjEdges.length; i++){
-
-      // If in open set with lower cost, do not add successor
-      var inOpen : boolean = false;
-      pQueue.forEach(function(Object1){
-        if(graph.compareNodes(Object1.current, adjEdges[i].to) == 0 && 
-          (Object1.cost + heuristics(Object1.current)) <= 
-            (adjEdges[i].cost + first.cost + heuristics(adjEdges[i].to))){
-          inOpen = true;
-        }
-      });
-
-      // If in closed, do not add successor
-      var inClosed : boolean = false;
-      for(var j = 0; j < closedSetNode.length; j++){
-        if(graph.compareNodes(closedSetNode[j].current, adjEdges[i].to) == 0){
-          inClosed = true;
-          break;
-        }
-      }
-
-      // if not in closed and not in open set, add to open set
-      if(!inOpen && !inClosed){
-        var tmp2 : StoredNode<Node> = {
-          parent: first.current,
-          current: adjEdges[i].to,
-          cost: first.cost + adjEdges[i].cost
-        };
-        pQueue.enqueue(tmp2);
-      }
-    }
-  }
-
-  // no path was found, return empty result
-  return result;
+    // Return result, which can be empty
+    return result;
 }
