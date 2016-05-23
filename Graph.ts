@@ -47,7 +47,6 @@ class QueueNode<Node> {
 * @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
 */
 
-<<<<<<< HEAD
 function aStarSearch<Node>(graph: Graph<Node>,
     start: Node,
     goal: (n: Node) => boolean,
@@ -105,9 +104,6 @@ function aStarSearch<Node>(graph: Graph<Node>,
             // Saves about 0.00000001s over using unshift. 
             result.path.reverse();
             return result;
-=======
-    
->>>>>>> 5d71ca75f67320f00442edd4fc9401394c277b6d
         }
 
         //Add neighbouring edges to queue
