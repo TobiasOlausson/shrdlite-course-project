@@ -131,6 +131,7 @@ function aStarSearch<Node>(graph: Graph<Node>,
                             return false; 
                         }
                     }
+                    return true; // Fix compiler warning
                 });
 
                 // If there is no shorter path in the queue, add the newly found one
