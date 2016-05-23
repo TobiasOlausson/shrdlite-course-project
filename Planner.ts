@@ -95,18 +95,32 @@ module Planner {
 
     function heuristics(state : State) : number {
         var numAbove : number = 0;
+        var armDist : number = 0;
         interpretation.forEach((conj) => {
             conj.forEach((literal) =>{ 
                 if(literal.relation == "holding"){
-                    numAbove = objectsAbove(literal.args[0], state)*4 +2;
+                    numAbove = objectsAbove(literal.args[0], state);
+                    armDist = armDistance(literal.args[0], state);
                     return;
                 }
             });
         });
-        return numAbove;
+        return armDist + numAbove*4 + 2 ;
     }
 
-    function objectsAbove(object : string, state : State){
+    function armDistance(object :string, state: State) : number {
+        var result : number = 0;
+        state.stacks.forEach((stack) => {
+            if(stack.indexOf(object) != -1){
+                result = Math.abs(state.arm - state.stacks.indexOf(stack));
+                return;
+            }
+        });
+        return result;
+
+    }
+
+    function objectsAbove(object : string, state : State) : number {
         var result : number = 0;
         state.stacks.forEach((stack) => {
             var index : number = stack.indexOf(object);
