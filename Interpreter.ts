@@ -268,7 +268,7 @@ module Interpreter {
             case "ontop":
                 return obj1X == obj2X && obj1Y == obj2Y + 1;
             case "above":
-                return obj1X == obj2X && obj1Y < obj2Y;
+                return obj1X == obj2X && obj1Y > obj2Y;
             case "beside":
                 return obj1X == obj2X + 1 || obj1X == obj2X - 1;
             case "leftof":
