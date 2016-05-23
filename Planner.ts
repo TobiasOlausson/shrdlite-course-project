@@ -116,9 +116,9 @@ module Planner {
 
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
-                        result = nearest + dist + (numAbove1 +numAbove2) *3 + 2 ;
+                        result = nearest + dist + (numAbove1 +numAbove2)*3 + 2 ;
 
-                        if((numAbove1 > 0 || numAbove2 > 0) && state.holding != null){
+                        if((numAbove2 > 0) && state.holding != null){
                             result += 1;
                         }
                         return;
@@ -138,17 +138,21 @@ module Planner {
         var result : number = 0;
         state.stacks.forEach((stack) => {
             if(stack.indexOf(object1) != -1){
-                index1 = Math.abs(state.arm - state.stacks.indexOf(stack));
-            }else if(stack.indexOf(object2) != -1){
-                index2 = Math.abs(state.arm - state.stacks.indexOf(stack));
-
+                index1 = state.stacks.indexOf(stack);
+            }
+            if(stack.indexOf(object2) != -1){
+                index2 = state.stacks.indexOf(stack);
             }
             if(index1 != -1 && index2 != -1){
                 return;
             }
         });
-        if(index1 != -1 && index2 != -1){
-            result = Math.abs(index1-index2);
+        if(index1 == -1){ // the arm is holding object 1
+            result = armDistance(object2, state);
+        }else if (index2 == -1){ // the arm is holding object 2
+            result = armDistance(object1, state);
+        }else{ // both objects are in stacks
+            result = Math.abs(index1 - index2);
         }
         return result;
 
@@ -168,8 +172,9 @@ module Planner {
 
     function objectsAbove(object : string, state : State) : number {
         var result : number = 0;
+        var index : number = -1;
         state.stacks.forEach((stack) => {
-            var index : number = stack.indexOf(object);
+            index = stack.indexOf(object);
             if (index != -1){
                 result = (stack.length-1) - index;
                 return;
