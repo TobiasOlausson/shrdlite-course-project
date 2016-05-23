@@ -116,7 +116,11 @@ module Planner {
 
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
-                        result = nearest + dist + (numAbove1 +numAbove2) *4 + 2 ;
+                        result = nearest + dist + (numAbove1 +numAbove2) *3 + 2 ;
+
+                        if((numAbove1 > 0 || numAbove2 > 0) && state.holding != null){
+                            result += 1;
+                        }
                         return;
                     default: 
                         result = 0;
