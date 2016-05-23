@@ -94,8 +94,29 @@ module Planner {
     }
 
     function heuristics(state : State) : number {
-        // TODO: implement
-        return 0;
+        var numAbove : number = 0;
+        interpretation.forEach((conj) => {
+            conj.forEach((literal) =>{ 
+                if(literal.relation == "holding"){
+                    numAbove = objectsAbove(literal.args[0], state)*4 +2;
+                    return;
+                }
+            });
+        });
+        return numAbove;
+    }
+
+    function objectsAbove(object : string, state : State){
+        var result : number = 0;
+        state.stacks.forEach((stack) => {
+            var index : number = stack.indexOf(object);
+            if (index != -1){
+                result = (stack.length-1) - index;
+                return;
+            }
+        });
+        return result;
+
     }
 
     function isGoal(state : State) : boolean {
