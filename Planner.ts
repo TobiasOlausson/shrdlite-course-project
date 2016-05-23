@@ -70,45 +70,176 @@ module Planner {
 
      var objects : {[s:string]: ObjectDefinition;} = null;
      var interpretation : Interpreter.DNFFormula = null;
+     var initialWorld : WorldState = null;
 
     function planInterpretation(interpret : Interpreter.DNFFormula, state : WorldState) : string[] {
         var timeout : number = 10000;
 
         var plan : string[] = [];
         var cloneState : WorldState = clone(state);
+        initialWorld = state;
 
         objects = cloneState.objects;
         interpretation = interpret;
 
-        // heuristics
-        // getHeuristics();
-
-        // start state
-        
-
         var startState : State = new State(cloneState.stacks, cloneState.holding, cloneState.arm, null);
 
-        // A* planner (graph, startState, isGoal, heuristics, timeout)
         var path = aStarSearch(new StateGraph(), startState, isGoal, heuristics, timeout);
-        path.path.forEach((steat) => {
-            if(steat.action != null)
-                plan.push(steat.action);
+        path.path.forEach((s) => {
+            if(s.action != null)
+                plan.push(s.action);
         });
 
         return plan;
     }
 
     function heuristics(state : State) : number {
-        return 0;
+        var result : number = 0;
+        var numAbove : number = 0;
+        var armDist : number = 0;
+        interpretation.forEach((conj) => {
+            conj.forEach((literal) =>{
+
+                if(isGoal(state)){
+                    result = 0;
+                    return;
+                }
+                switch(literal.relation){
+                    case "holding":
+                        numAbove = objectsAbove(literal.args[0], state);
+                        armDist = armDistance(literal.args[0], state);
+                        result = armDist + numAbove*4 + 1;
+                        return;
+                    case "ontop":
+                    case "inside":
+                        var numAbove1 = objectsAbove(literal.args[0], state);
+                        var numAbove2 = objectsAbove(literal.args[1], state);
+                        var armDist1 = armDistance(literal.args[0], state);
+                        var armDist2 = armDistance(literal.args[1], state);
+                        var nearest : number = 0;
+
+                        if(numAbove1 == 0 && numAbove2 > 0){
+                            nearest = armDist2;
+                        }else if(numAbove2 == 0 && numAbove1 > 0){
+                            nearest = armDist1;
+                        }else if(numAbove1 == 0 && numAbove2 ==0){
+                            nearest = armDist1;
+                        }else{
+                            nearest = Math.min(armDist1, armDist2); 
+                        }
+
+                        var dist : number = distBetween(literal.args[0], literal.args[1], state);
+
+                        result = nearest + dist + (numAbove1 + numAbove2)*3 + 2 ;
+
+                        if((numAbove2 > 0) && state.holding != null){
+                            result += 1;
+                        }
+                        return;
+                    case "above":
+                        numAbove = objectsAbove(literal.args[0], state);
+
+                        var armDist1 = armDistance(literal.args[0], state);
+                        var armDist2 = armDistance(literal.args[1], state);
+                        var dist : number = distBetween(literal.args[0], literal.args[1], state);
+                        var nearest : number = Math.min(armDist1, armDist2);
+
+                        result = numAbove*4 + dist + nearest;
+                        return;
+
+                    case "leftof":
+                    case "rightof":
+                    case "beside":
+                        var dist : number = distBetween(literal.args[0], literal.args[1], state) -1;
+                        numAbove = objectsAbove(literal.args[0], state);
+                        armDist = armDistance(literal.args[0], state);
+                        result = numAbove*4 + dist + armDist;
+                        return;
+
+                    default: 
+                        result = 0;
+                        return;
+
+                }
+            });
+        });
+        return result;
+    }
+
+    function distBetween(object1 : string, object2 : string, state: State) : number{
+        var index1 : number = -1;
+        var index2 : number = -1;
+        var result : number = 0;
+        state.stacks.forEach((stack) => {
+            if(stack.indexOf(object1) != -1){
+                index1 = state.stacks.indexOf(stack);
+            }
+            if(stack.indexOf(object2) != -1){
+                index2 = state.stacks.indexOf(stack);
+            }
+            if(index1 != -1 && index2 != -1){
+                return;
+            }
+        });
+        if(index1 == -1){ // the arm is holding object 1
+            result = armDistance(object2, state);
+        }else if (index2 == -1){ // the arm is holding object 2
+            result = armDistance(object1, state);
+        }else{ // both objects are in stacks
+            result = Math.abs(index1 - index2);
+        }
+        return result;
+
+    }
+
+    function armDistance(object : string, state: State) : number {
+        var result : number = 0;
+        state.stacks.forEach((stack) => {
+            if(stack.indexOf(object) != -1){
+                result = Math.abs(state.arm - state.stacks.indexOf(stack));
+                return;
+            }
+        });
+        return result;
+
+    }
+
+    function objectsAbove(object : string, state : State) : number {
+        var result : number = 0;
+        var index : number = -1;
+        state.stacks.forEach((stack) => {
+            index = stack.indexOf(object);
+            if (index != -1){
+                result = (stack.length-1) - index;
+                return;
+            }
+        });
+        return result;
+
     }
 
     function isGoal(state : State) : boolean {
         var res = interpretation.some(function (interp) {
             return interp.every(function (literal) {
-                if(literal.relation == "holding"){
-                    return (literal.args[0] == state.holding);
-                }else{
-                    return true;
+                switch(literal.relation){
+                    case "holding":
+                        return (literal.args[0] == state.holding);
+                    case "inside":
+                    case "above":
+                    case "beside":
+                    case "leftof":
+                    case "rightof":
+                    case "ontop":
+                        var worldState : WorldState = clone(initialWorld);
+                        worldState.arm = state.arm;
+                        worldState.stacks = state.stacks;
+                        worldState.holding = state.holding;
+                        worldState.objects = objects;
+
+                        return Interpreter.relationCheck(literal.args[0], 
+                            literal.args[1], literal.relation, worldState);
+                    default:
+                        return false;
                 }
             });
         });
@@ -124,6 +255,19 @@ module Planner {
             public action :string
         ){}
 
+
+
+        toString() : string {
+            return ("Arm: " + this.arm + 
+            " | Holding: " + this.holding + 
+            " | Action: " + this.action + 
+            " | Stacks: " +
+            this.stacks[0] +":"+
+            this.stacks[1] +":"+
+            this.stacks[2] +":"+
+            this.stacks[3] +":"+
+            this.stacks[4]);
+        }
     }
 
     class StateGraph implements Graph<State> {
@@ -156,7 +300,7 @@ module Planner {
             if(equalStacks && equalHolding && equalArms && equalActions){
                 return 0;
             }else{
-                return -1;
+                return 1;
             }
         }
     }
@@ -187,11 +331,14 @@ module Planner {
                 break;
             case "d":
                 if(state.holding != null){
+                    // state of the arm
                     var x = newState.arm;
+                    // length of the stack at arms position
                     var length = newState.stacks[x].length;
+                    // y value of the object to be checked at stack x
                     var y = length - 1;
 
-                    if(y > 1){
+                    if(length > 0){
                         var below : string = newState.stacks[x][y];
                         var belowObject : Parser.Object = objects[below];
                         var ontopObject : Parser.Object = objects[newState.holding];
@@ -223,22 +370,4 @@ module Planner {
     function clone<T>(obj: T): T {
         return JSON.parse(JSON.stringify(obj));
     }
-
-    function toString(interpretation : Interpreter.DNFFormula) : string{
-        var result : string = "";
-
-        for(var i = 0; i < interpretation.length; i++){
-            for(var j = 0; j < interpretation[i].length; j++){
-                result = result.concat(interpretation[i][j].relation + "(");
-                for(var k = 0; k < interpretation[i][j].args.length; k++){
-                    result = result.concat(interpretation[i][j].args[k]);
-                    if(k + 1  < interpretation[i][j].args.length)
-                        result = result.concat(", ");
-                }
-                result = result.concat(")    ")
-            }
-        }
-        return result;
-    }
-
 }
