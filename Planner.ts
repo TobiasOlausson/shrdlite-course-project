@@ -111,6 +111,7 @@ module Planner {
                         result = armDist + numAbove*4 + 1;
                         return;
                     case "ontop":
+                    case "inside":
                         var numAbove1 = objectsAbove(literal.args[0], state);
                         var numAbove2 = objectsAbove(literal.args[1], state);
                         var armDist1 = armDistance(literal.args[0], state);
