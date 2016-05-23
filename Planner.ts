@@ -100,6 +100,10 @@ module Planner {
         interpretation.forEach((conj) => {
             conj.forEach((literal) =>{
 
+                if(isGoal(state)){
+                    result = 0;
+                    return;
+                }
                 switch(literal.relation){
                     case "holding":
                         numAbove = objectsAbove(literal.args[0], state);
@@ -107,11 +111,13 @@ module Planner {
                         result = armDist + numAbove*4 + 1;
                         return;
                     case "ontop":
+                    case "inside":
                         var numAbove1 = objectsAbove(literal.args[0], state);
                         var numAbove2 = objectsAbove(literal.args[1], state);
                         var armDist1 = armDistance(literal.args[0], state);
                         var armDist2 = armDistance(literal.args[1], state);
                         var nearest : number = 0;
+
                         if(numAbove1 == 0 && numAbove2 > 0){
                             nearest = armDist2;
                         }else if(numAbove2 == 0 && numAbove1 > 0){
@@ -124,12 +130,23 @@ module Planner {
 
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
-                        result = nearest + dist + (numAbove1 +numAbove2)*3 + 2 ;
+                        result = nearest + dist + (numAbove1 + numAbove2)*3 + 2 ;
 
                         if((numAbove2 > 0) && state.holding != null){
                             result += 1;
                         }
                         return;
+                    case "above":
+                        numAbove = objectsAbove(literal.args[0], state);
+
+                        var armDist1 = armDistance(literal.args[0], state);
+                        var armDist2 = armDistance(literal.args[1], state);
+                        var dist : number = distBetween(literal.args[0], literal.args[1], state);
+                        var nearest : number = Math.min(armDist1, armDist2); ;
+
+                        result = numAbove*4 + dist + nearest;
+                        return;
+
                     default: 
                         result = 0;
                         return;
