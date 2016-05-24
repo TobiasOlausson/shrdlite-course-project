@@ -95,6 +95,7 @@ module Planner {
     }
 
     function heuristics(state : State) : number {
+        var endResult : number = Infinity;
         var result : number = 0;
         var numAbove : number = 0;
         var armDist : number = 0;
@@ -143,6 +144,16 @@ module Planner {
                             result += 1;
                         }
                         return;
+                    case "under":
+                        numAbove = objectsAbove(literal.args[1], state);
+
+                        var armDist1 = armDistance(literal.args[0], state);
+                        var armDist2 = armDistance(literal.args[1], state);
+                        var dist : number = distBetween(literal.args[0], literal.args[1], state);
+                        var nearest : number = Math.min(armDist1, armDist2);
+
+                        result = numAbove*4 + dist + nearest;
+                        return;
                     case "above":
                         numAbove = objectsAbove(literal.args[0], state);
 
@@ -169,8 +180,12 @@ module Planner {
 
                 }
             });
+
+            if (result < endResult){
+                endResult = result;
+            }
         });
-        return result;
+        return endResult;
     }
 
     function isAbove(object1 : string, object2 : string, state: State){
