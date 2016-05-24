@@ -191,6 +191,8 @@ module Interpreter {
     function getObjectStrings (state : WorldState) : string[] {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
 
+        if(state.holding != null)
+            objectStrings.push(state.holding);
         objectStrings.push("floor");
         return objectStrings;
     }
