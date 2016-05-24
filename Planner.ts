@@ -129,6 +129,12 @@ module Planner {
                             nearest = Math.min(armDist1, armDist2); 
                         }
 
+                        if(isAbove(literal.args[0], literal.args[1], state)) {
+                            numAbove2 = numAbove2 - numAbove1;
+                        }else if(isAbove(literal.args[1], literal.args[0], state)) {
+                            numAbove1 = numAbove1 - numAbove2;
+                        }
+
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
                         result = nearest + dist + (numAbove1 + numAbove2)*3 + 2 ;
@@ -165,6 +171,23 @@ module Planner {
             });
         });
         return result;
+    }
+
+    function isAbove(object1 : string, object2 : string, state: State){
+        var result : boolean = false;
+        var index1 : number = -1;
+        var index2 : number = -1;
+        state.stacks.forEach((stack) => {
+            index2 = stack.indexOf(object2);
+            if (index1 != -1){
+                index1 = stack.indexOf(object1);
+
+                result = index1>index2;
+                return;
+            }
+        });
+        return result;
+
     }
 
     function distBetween(object1 : string, object2 : string, state: State) : number{
