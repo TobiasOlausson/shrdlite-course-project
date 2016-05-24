@@ -254,6 +254,7 @@ module Planner {
                     case "leftof":
                     case "rightof":
                     case "ontop":
+                    case "under":
                         var worldState : WorldState = clone(initialWorld);
                         worldState.arm = state.arm;
                         worldState.stacks = state.stacks;

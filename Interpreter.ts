@@ -258,6 +258,8 @@ module Interpreter {
                 return obj1X == obj2X && obj1Y == obj2Y + 1;
             case "above":
                 return obj1X == obj2X && obj1Y > obj2Y;
+            case "under":
+                return obj1X == obj2X && obj1Y < obj2Y;
             case "beside":
                 return obj1X == obj2X + 1 || obj1X == obj2X - 1;
             case "leftof":
@@ -351,6 +353,9 @@ module Interpreter {
                 }
             case "above":
                 if(obj2.form == "ball") return false;
+                return true;
+            case "under":
+                if(obj1.form == "ball") return false;
                 return true;
             case "leftof":
             case "rightof":
