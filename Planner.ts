@@ -93,6 +93,25 @@ module Planner {
 
         return plan;
     }
+    class State {
+
+        constructor(
+            public stacks : Stack[], 
+            public holding : string, 
+            public arm: number, 
+            public action :string
+        ){}
+
+    }
+
+    function getWorldState(state : State) : WorldState{
+            var worldState : WorldState = clone(initialWorld);
+            worldState.arm = state.arm;
+            worldState.stacks = state.stacks;
+            worldState.holding = state.holding;
+            worldState.objects = objects;
+            return worldState;
+        }
 
     function heuristics(state : State) : number {
         var endResult : number = Infinity;
@@ -159,7 +178,7 @@ module Planner {
 
                         var canPut : boolean = true;
                         if(!(state.holding == literal.args[1]) ){
-                            canPut = Interpreter.constraints(objects[literal.args[0]], objects[getTopOfStack(literal.args[1], state)], literal.relation) ;
+                            canPut = Interpreter.constraints(literal.args[0], getTopOfStack(literal.args[1], state), literal.relation, getWorldState(state) ) ;
 
                         }
                         var armDist1 = armDistance(literal.args[0], state);
@@ -307,24 +326,6 @@ module Planner {
         return res;
     }
 
-    class State {
-
-        constructor(
-            public stacks : Stack[], 
-            public holding : string, 
-            public arm: number, 
-            public action :string
-        ){}
-
-        getWorldState() {
-            var worldState : WorldState = clone(initialWorld);
-            worldState.arm = this.arm;
-            worldState.stacks = this.stacks;
-            worldState.holding = this.holding;
-            worldState.objects = objects;
-            return worldState;
-        }
-    }
 
     class StateGraph implements Graph<State> {
 
@@ -400,8 +401,8 @@ module Planner {
                         // var belowObject : Parser.Object = objects[below];
                         // var ontopObject : Parser.Object = objects[newState.holding];
 
-                        if(Interpreter.constraints(ontop, below, "ontop", state.getWorldState())
-                            || Interpreter.constraints(ontop, below, "inside", state.getWorldState())){
+                        if(Interpreter.constraints(ontop, below, "ontop", getWorldState(state))
+                            || Interpreter.constraints(ontop, below, "inside", getWorldState(state))){
                             newState.stacks[x].push(newState.holding);
                             newState.holding = null;
                             newState.action = action;
