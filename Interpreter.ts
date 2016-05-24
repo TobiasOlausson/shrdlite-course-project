@@ -120,12 +120,8 @@ module Interpreter {
                 var ents : string[] = getEntities(cmd.entity, state);
                 var destEnts : string[] = getEntities(cmd.location.entity, state);
                 ents.forEach((ent) => {
-                    var obj = getWorldObject(ent, state);
-
                     destEnts.forEach((destEnt) => {
-                        var destObj = getWorldObject(destEnt, state);
-
-                        if (constraints(obj, destObj, cmd.location.relation)){
+                        if (constraints(ent, destEnt, cmd.location.relation, state)){
                             interpretations.push([{polarity: true, 
                                 relation: cmd.location.relation, 
                                 args: [ent, destEnt]}]);
@@ -137,12 +133,12 @@ module Interpreter {
                 if(state.holding == null)
                     break;
 
-                var obj = getWorldObject(state.holding, state);
+                // var obj = getWorldObject(state.holding, state);
                 var destEnts = getEntities(cmd.location.entity, state);
                 destEnts.forEach((destEnt) => {
                     var destObj = getWorldObject(destEnt, state);
 
-                    if (constraints(obj, destObj, cmd.location.relation)){
+                    if (constraints(state.holding, destEnt, cmd.location.relation, state)){
                         interpretations.push([{polarity: true, 
                             relation: cmd.location.relation, 
                             args: [state.holding, destEnt]}]);
@@ -251,8 +247,7 @@ module Interpreter {
 
         switch(relation){
             case "inside":
-                return constraints(getWorldObject(obj1,state), 
-                    getWorldObject(obj2, state), "inside") && obj1X == obj2X && 
+                return constraints(obj1, obj2, relation, state) && obj1X == obj2X && 
                     obj1Y == obj2Y + 1;
             case "ontop":
                 return obj1X == obj2X && obj1Y == obj2Y + 1;
@@ -296,7 +291,10 @@ module Interpreter {
             (objectDef.color == color || color == null);
     }
 
-    export function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
+    export function constraints (objStr1 : string, objStr2 : string, relation : string, state : WorldState) : boolean {
+        var obj1 = getWorldObject(objStr1, state);
+        var obj2 = getWorldObject(objStr2, state);
+
         if(obj1.form == "floor") return false;
 
         // shouldnt be needed, check elsewhere

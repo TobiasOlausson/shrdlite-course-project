@@ -294,6 +294,15 @@ module Planner {
             public arm: number, 
             public action :string
         ){}
+
+        getWorldState() {
+            var worldState : WorldState = clone(initialWorld);
+            worldState.arm = this.arm;
+            worldState.stacks = this.stacks;
+            worldState.holding = this.holding;
+            worldState.objects = objects;
+            return worldState;
+        }
     }
 
     class StateGraph implements Graph<State> {
@@ -366,11 +375,12 @@ module Planner {
 
                     if(length > 0){
                         var below : string = newState.stacks[x][y];
-                        var belowObject : Parser.Object = objects[below];
-                        var ontopObject : Parser.Object = objects[newState.holding];
+                        var ontop : string = newState.holding;
+                        // var belowObject : Parser.Object = objects[below];
+                        // var ontopObject : Parser.Object = objects[newState.holding];
 
-                        if(Interpreter.constraints(ontopObject, belowObject, "ontop")
-                            || Interpreter.constraints(ontopObject, belowObject, "inside")){
+                        if(Interpreter.constraints(ontop, below, "ontop", state.getWorldState())
+                            || Interpreter.constraints(ontop, below, "inside", state.getWorldState())){
                             newState.stacks[x].push(newState.holding);
                             newState.holding = null;
                             newState.action = action;
