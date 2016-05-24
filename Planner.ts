@@ -157,12 +157,20 @@ module Planner {
                     case "above":
                         numAbove = objectsAbove(literal.args[0], state);
 
+                        var canPut : boolean = true;
+                        if(!(state.holding == literal.args[1]) ){
+                            canPut = Interpreter.constraints(objects[literal.args[0]], objects[getTopOfStack(literal.args[1], state)], literal.relation) ;
+
+                        }
                         var armDist1 = armDistance(literal.args[0], state);
                         var armDist2 = armDistance(literal.args[1], state);
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
                         var nearest : number = Math.min(armDist1, armDist2);
 
                         result = numAbove*4 + dist + nearest;
+                        if(!canPut){
+                            result = result + 3;
+                        }
                         return;
 
                     case "leftof":
@@ -187,8 +195,21 @@ module Planner {
         });
         return endResult;
     }
+    function getTopOfStack(object: string, state : State) : string{
+        var result : string = "";
+        var index : number = -1;
+        state.stacks.forEach((stack) => {
+            index = stack.indexOf(object);
+            if (index != -1){
+                result = stack[stack.length-1];
+                return;
+            }
+        });
+        return result;
 
-    function isAbove(object1 : string, object2 : string, state: State){
+    }
+
+    function isAbove(object1 : string, object2 : string, state: State) : boolean{
         var result : boolean = false;
         var index1 : number = -1;
         var index2 : number = -1;
