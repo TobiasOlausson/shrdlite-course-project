@@ -225,32 +225,27 @@ module Interpreter {
         }
 
         if(obj1 == "floor") return false;
+        var obj1X : number;
+        var obj2X : number;
+        var obj1Y : number;
+        var obj2Y : number;
 
-        var obj1X : number = Infinity;
-        var obj2X : number = Infinity;
-        var obj1Y : number = Infinity;
-        var obj2Y : number = Infinity;
-        // find indices of obj1 and obj2
-        for(var x : number = 0; x < state.stacks.length; x++){
-            for(var y : number = 0; y < state.stacks[x].length; y++){
-                if(state.stacks[x][y] == obj2){
-                    obj2X = x;
-                    obj2Y = y;
-                }
-
-                if(state.stacks[x][y] == obj1){
-                    obj1X = x;
-                    obj1Y = y;
-                }
-            }
+        if(getIndex(obj1, state) != null){
+            obj1X = getIndex(obj1, state).x;
+            obj1Y = getIndex(obj1, state).y;
+        } else {
+            return false;
         }
+
         if(obj2 == "floor"){
             obj2Y = -1;
             obj2X = obj1X;
-        }
-        // no objects were found
-        if(obj1Y == Infinity || obj2Y == Infinity)
+        } else if(getIndex(obj2, state) != null){
+            obj2X = getIndex(obj2, state).x;
+            obj2Y = getIndex(obj2, state).y;
+        } else {
             return false;
+        }
 
         switch(relation){
             case "inside":
@@ -270,6 +265,25 @@ module Interpreter {
             default:
                 return false;
         }
+    }
+
+    class Index {
+        constructor(
+            public x : number,
+            public y : number
+        ){}
+    }
+
+    /** Find the index of an object in a world */
+    function getIndex(object : Parser.Object, state : WorldState) : Index {
+        for(var x : number = 0; x < state.stacks.length; x++){
+            for(var y : number = 0; y < state.stacks[x].length; y++){
+                if(state.stacks[x][y] == object){
+                    return new Index(x, y);
+                }
+            }
+        }
+        return null;
     }
 
     function fitsDescription(objectDef : Parser.Object, color : string, size : string, form : string): boolean {

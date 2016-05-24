@@ -55,6 +55,12 @@ module Planner {
         return result.plan.join(", ");
     }
 
+
+
+    var objects : {[s:string]: ObjectDefinition;} = null;
+    var interpretation : Interpreter.DNFFormula = null;
+    var initialWorld : WorldState = null;
+
     //////////////////////////////////////////////////////////////////////
     // private functions
 
@@ -67,11 +73,6 @@ module Planner {
      * actions for the robot to perform, encoded as "l", "r", "p", or
      * "d".
      */
-
-     var objects : {[s:string]: ObjectDefinition;} = null;
-     var interpretation : Interpreter.DNFFormula = null;
-     var initialWorld : WorldState = null;
-
     function planInterpretation(interpret : Interpreter.DNFFormula, state : WorldState) : string[] {
         var timeout : number = 10000;
 
@@ -254,20 +255,6 @@ module Planner {
             public arm: number, 
             public action :string
         ){}
-
-
-
-        toString() : string {
-            return ("Arm: " + this.arm + 
-            " | Holding: " + this.holding + 
-            " | Action: " + this.action + 
-            " | Stacks: " +
-            this.stacks[0] +":"+
-            this.stacks[1] +":"+
-            this.stacks[2] +":"+
-            this.stacks[3] +":"+
-            this.stacks[4]);
-        }
     }
 
     class StateGraph implements Graph<State> {
@@ -300,7 +287,7 @@ module Planner {
             if(equalStacks && equalHolding && equalArms && equalActions){
                 return 0;
             }else{
-                return 1;
+                return -1;
             }
         }
     }
