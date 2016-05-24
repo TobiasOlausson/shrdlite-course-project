@@ -95,6 +95,7 @@ module Planner {
     }
 
     function heuristics(state : State) : number {
+        var endResult : number = Infinity;
         var result : number = 0;
         var numAbove : number = 0;
         var armDist : number = 0;
@@ -169,8 +170,12 @@ module Planner {
 
                 }
             });
+
+            if (result < endResult){
+                endResult = result;
+            }
         });
-        return result;
+        return endResult;
     }
 
     function isAbove(object1 : string, object2 : string, state: State){
