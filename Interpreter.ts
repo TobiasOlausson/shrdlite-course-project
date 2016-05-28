@@ -106,7 +106,7 @@ module Interpreter {
      */
 
     function getClarificationQuestion(ents : string[], state : WorldState) : string {
-	var result : string = "Did you mean :\n";
+	var result : string = "Did you mean:\n";
 	
 	for (var i = 0; i < ents.length; i++) {
 	    var obj = getWorldObject(ents[i], state);
@@ -144,6 +144,12 @@ module Interpreter {
             break;
         case "move":
             var destEnts : string[] = getEntities(cmd.location.entity, state);
+
+	    /*if(destEnts.length > 1) {
+		var index : number = parseInt(window.prompt(getClarificationQuestion(destEnts, state)));
+		destEnts = destEnts.slice(index, index + 1);
+	    }*/
+	    
             ents.forEach((ent) => {
                 destEnts.forEach((destEnt) => {
                     if (constraints(ent, destEnt, cmd.location.relation, state)){
@@ -158,7 +164,7 @@ module Interpreter {
             if(state.holding == null) {
                 break;
 	    }
-            
+
             ents.forEach((destEnt) => {
                 var destObj = getWorldObject(destEnt, state);
 
