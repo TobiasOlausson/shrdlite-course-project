@@ -145,10 +145,10 @@ module Interpreter {
         case "move":
             var destEnts : string[] = getEntities(cmd.location.entity, state);
 
-	    /*if(destEnts.length > 1) {
+	    if(destEnts.length > 1) {
 		var index : number = parseInt(window.prompt(getClarificationQuestion(destEnts, state)));
 		destEnts = destEnts.slice(index, index + 1);
-	    }*/
+	    }
 	    
             ents.forEach((ent) => {
                 destEnts.forEach((destEnt) => {
