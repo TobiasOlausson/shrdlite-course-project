@@ -100,7 +100,12 @@ module Planner {
             public holding : string, 
             public arm: number, 
             public action :string
-        ){}
+        ) { }
+
+        // Enables the use of hashmaps in aStarSearch /André
+        public toString = (): string => {
+            return (this.stacks + this.holding + this.arm + this.action);
+        }
 
     }
 
