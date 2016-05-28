@@ -3,39 +3,39 @@
 ///<reference path="lib/collections.ts"/>
 
 /**
-* Interpreter module
-*
-* The goal of the Interpreter module is to interpret a sentence
-* written by the user in the context of the current world state. In
-* particular, it must figure out which objects in the world,
-* i.e. which elements in the `objects` field of WorldState, correspond
-* to the ones referred to in the sentence.
-*
-* Moreover, it has to derive what the intended goal state is and
-* return it as a logical formula described in terms of literals, where
-* each literal represents a relation among objects that should
-* hold. For example, assuming a world state where "a" is a ball and
-* "b" is a table, the command "put the ball on the table" can be
-* interpreted as the literal ontop(a,b). More complex goals can be
-* written using conjunctions and disjunctions of these literals.
-*
-* In general, the module can take a list of possible parses and return
-* a list of possible interpretations, but the code to handle this has
-* already been written for you. The only part you need to implement is
-* the core interpretation function, namely `interpretCommand`, which produces a
-* single interpretation for a single command.
-*/
+ * Interpreter module
+ *
+ * The goal of the Interpreter module is to interpret a sentence
+ * written by the user in the context of the current world state. In
+ * particular, it must figure out which objects in the world,
+ * i.e. which elements in the `objects` field of WorldState, correspond
+ * to the ones referred to in the sentence.
+ *
+ * Moreover, it has to derive what the intended goal state is and
+ * return it as a logical formula described in terms of literals, where
+ * each literal represents a relation among objects that should
+ * hold. For example, assuming a world state where "a" is a ball and
+ * "b" is a table, the command "put the ball on the table" can be
+ * interpreted as the literal ontop(a,b). More complex goals can be
+ * written using conjunctions and disjunctions of these literals.
+ *
+ * In general, the module can take a list of possible parses and return
+ * a list of possible interpretations, but the code to handle this has
+ * already been written for you. The only part you need to implement is
+ * the core interpretation function, namely `interpretCommand`, which produces a
+ * single interpretation for a single command.
+ */
 module Interpreter {
 
     //////////////////////////////////////////////////////////////////////
     // exported functions, classes and interfaces/types
 
     /**
-    Top-level function for the Interpreter. It calls `interpretCommand` for each possible parse of the command. No need to change this one.
-    * @param parses List of parses produced by the Parser.
-    * @param currentState The current state of the world.
-    * @returns Augments ParseResult with a list of interpretations. Each interpretation is represented by a list of Literals.
-    */
+       Top-level function for the Interpreter. It calls `interpretCommand` for each possible parse of the command. No need to change this one.
+       * @param parses List of parses produced by the Parser.
+       * @param currentState The current state of the world.
+       * @returns Augments ParseResult with a list of interpretations. Each interpretation is represented by a list of Literals.
+       */
     export function interpret(parses : Parser.ParseResult[], currentState : WorldState) : InterpretationResult[] {
         var errors : Error[] = [];  
         var interpretations : InterpretationResult[] = [];
@@ -46,7 +46,7 @@ module Interpreter {
                 if(intprt != null){
                     result.interpretation = intprt;
                     interpretations.push(result);
-                }
+                } 
             } catch(err) {
                 errors.push(err);
             }
@@ -67,9 +67,9 @@ module Interpreter {
     type Conjunction = Literal[];
 
     /**
-    * A Literal represents a relation that is intended to
-    * hold among some objects.
-    */
+     * A Literal represents a relation that is intended to
+     * hold among some objects.
+     */
     export interface Literal {
         /** Whether this literal asserts the relation should hold
          * (true polarity) or not (false polarity). For example, we
@@ -104,50 +104,74 @@ module Interpreter {
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
      * @throws An error when no valid interpretations can be found
      */
+
+    function getClarificationQuestion(ents : string[], state : WorldState) : string {
+	var result : string = "Did you mean :\n";
+	
+	for (var i = 0; i < ents.length; i++) {
+	    var obj = getWorldObject(ents[i], state);
+	    var descr : string = "(" + i + ") the " + obj.size + " " + obj.color + " " + obj.form;
+	    console.log("Object description" + descr);
+
+	    if (i == 0) {
+		result = result.concat("\n" + descr);
+	    } else if (i < ents.length - 1) {
+		result = result.concat(", \n" + descr);
+	    } else {
+		result = result.concat(" or \n" + descr + "?");
+	    }
+	}
+	
+	return result + "\n\nPlease answer with a number.";
+    }
     
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {            
         var interpretations : DNFFormula = [];
+	var ents : string[] = getEntities(cmd.entity, state);
+
+	if(ents.length > 1) {
+	    var index : number = parseInt(window.prompt(getClarificationQuestion(ents, state)));
+	    ents = ents.slice(index, index + 1);
+	}
+	
         switch(cmd.command){
-            case "take":
-                var ents : string[] = getEntities(cmd.entity, state);
-                ents.forEach((objStr) => {
-                    if(objStr != "floor")
-                        interpretations.push([{polarity: true, relation: "holding", 
-                            args: [objStr]}]);
-                });
-                break;
-            case "move":
-                var ents : string[] = getEntities(cmd.entity, state);
-                var destEnts : string[] = getEntities(cmd.location.entity, state);
-                ents.forEach((ent) => {
-                    destEnts.forEach((destEnt) => {
-                        if (constraints(ent, destEnt, cmd.location.relation, state)){
-                            interpretations.push([{polarity: true, 
-                                relation: cmd.location.relation, 
-                                args: [ent, destEnt]}]);
-                        }
-                    });
-                });
-                break;
-            case "put":
-                if(state.holding == null)
-                    break;
-
-                // var obj = getWorldObject(state.holding, state);
-                var destEnts = getEntities(cmd.location.entity, state);
+        case "take":
+            ents.forEach((objStr) => {
+                if(objStr != "floor")
+                    interpretations.push([{polarity: true, relation: "holding", 
+					   args: [objStr]}]);
+            });
+            break;
+        case "move":
+            var destEnts : string[] = getEntities(cmd.location.entity, state);
+            ents.forEach((ent) => {
                 destEnts.forEach((destEnt) => {
-                    var destObj = getWorldObject(destEnt, state);
-
-                    if (constraints(state.holding, destEnt, cmd.location.relation, state)){
+                    if (constraints(ent, destEnt, cmd.location.relation, state)){
                         interpretations.push([{polarity: true, 
-                            relation: cmd.location.relation, 
-                            args: [state.holding, destEnt]}]);
+					       relation: cmd.location.relation, 
+					       args: [ent, destEnt]}]);
                     }
                 });
+            });
+            break;
+        case "put":
+            if(state.holding == null) {
                 break;
-            default:
-                break;
-            }
+	    }
+            
+            ents.forEach((destEnt) => {
+                var destObj = getWorldObject(destEnt, state);
+
+                if (constraints(state.holding, destEnt, cmd.location.relation, state)){
+                    interpretations.push([{polarity: true, 
+					   relation: cmd.location.relation, 
+					   args: [state.holding, destEnt]}]);
+                }
+            });
+            break;
+        default:
+            break;
+        }
         if(interpretations.length == 0) 
             return null;
         return interpretations;
@@ -173,14 +197,14 @@ module Interpreter {
 
         objectStrings.forEach((objStr) => {
 
-                locObjStrings.forEach((locStr) => {
-                    if(relationCheck(objStr, locStr, relation, state)) {
-                        if(result.indexOf(objStr) == -1){
-                            result.push(objStr);
-                        } 
-                    }
-                });
+            locObjStrings.forEach((locStr) => {
+                if(relationCheck(objStr, locStr, relation, state)) {
+                    if(result.indexOf(objStr) == -1){
+                        result.push(objStr);
+                    } 
+                }
             });
+        });
         return result;
     }
 
@@ -246,23 +270,23 @@ module Interpreter {
         }
 
         switch(relation){
-            case "inside":
-                return constraints(obj1, obj2, relation, state) && obj1X == obj2X && 
-                    obj1Y == obj2Y + 1;
-            case "ontop":
-                return obj1X == obj2X && obj1Y == obj2Y + 1;
-            case "above":
-                return obj1X == obj2X && obj1Y > obj2Y;
-            case "under":
-                return obj1X == obj2X && obj1Y < obj2Y;
-            case "beside":
-                return obj1X == obj2X + 1 || obj1X == obj2X - 1;
-            case "leftof":
-                return obj1X < obj2X;
-            case "rightof":
-                return obj1X > obj2X;
-            default:
-                return false;
+        case "inside":
+            return constraints(obj1, obj2, relation, state) && obj1X == obj2X && 
+                obj1Y == obj2Y + 1;
+        case "ontop":
+            return obj1X == obj2X && obj1Y == obj2Y + 1;
+        case "above":
+            return obj1X == obj2X && obj1Y > obj2Y;
+        case "under":
+            return obj1X == obj2X && obj1Y < obj2Y;
+        case "beside":
+            return obj1X == obj2X + 1 || obj1X == obj2X - 1;
+        case "leftof":
+            return obj1X < obj2X;
+        case "rightof":
+            return obj1X > obj2X;
+        default:
+            return false;
         }
     }
 
@@ -302,65 +326,65 @@ module Interpreter {
             return false;
 
         switch(relation) {
-            case "inside":
-                // An object can only be placed inside of a box
-                // Only a number of small objects can be placed in a small box
-                // and certain small objects cant be placed inside a large box
-                // all other cases are true
-                if(obj2.form != "box")
-                    return false;
-                if(obj2.size == "small"){
-                    return obj1.size == "small" && 
-                        (obj1.form == "ball" || obj1.form == "brick" 
-                            || obj1.form == "table");
-                } else {
-                    return obj1.size == "small" || 
-                        (obj1.form != "pyramid" && obj1.form != "box" 
-                            && obj1.form != "plank");
-                }
+        case "inside":
+            // An object can only be placed inside of a box
+            // Only a number of small objects can be placed in a small box
+            // and certain small objects cant be placed inside a large box
+            // all other cases are true
+            if(obj2.form != "box")
+                return false;
+            if(obj2.size == "small"){
+                return obj1.size == "small" && 
+                    (obj1.form == "ball" || obj1.form == "brick" 
+                     || obj1.form == "table");
+            } else {
+                return obj1.size == "small" || 
+                    (obj1.form != "pyramid" && obj1.form != "box" 
+                     && obj1.form != "plank");
+            }
             // special cases for ball and box
-            case "ontop":
-                // cant place objects on balls
-                if(obj2.form == "ball")
-                    return false;
+        case "ontop":
+            // cant place objects on balls
+            if(obj2.form == "ball")
+                return false;
 
-                // a ball can only be placed on the floor
-                if(obj1.form == "ball"){
-                    return obj2.form == "floor";
-                }
+            // a ball can only be placed on the floor
+            if(obj1.form == "ball"){
+                return obj2.form == "floor";
+            }
 
-                // a box can not be put ontop of a box
-                if(obj1.form == "box" && obj2.form == "box")
-                    return false;
+            // a box can not be put ontop of a box
+            if(obj1.form == "box" && obj2.form == "box")
+                return false;
 
-                // cant put a large table ontop some small objects
-                if(obj1.size == "large" && obj2.size == "small"){
-                    return !(obj1.form == "table" && (obj2.form == "box" 
-                        || obj2.form == "brick" || obj2.form == "pyramid"));
+            // cant put a large table ontop some small objects
+            if(obj1.size == "large" && obj2.size == "small"){
+                return !(obj1.form == "table" && (obj2.form == "box" 
+						  || obj2.form == "brick" || obj2.form == "pyramid"));
 
                 // cant put a small object ontop a large box
-                } else if(obj1.size == "small" && obj2.size == "large" && obj2.form == "box"){
-                    return false;
+            } else if(obj1.size == "small" && obj2.size == "large" && obj2.form == "box"){
+                return false;
 
                 // only certain objects can be placed ontop of a large box
-                } else if(obj1.size == "large" && obj2.size == "large" && obj2.form == "box"){
-                    return obj1.form != "table" && obj1.form != "plank" && obj1.form != "pyramid";
+            } else if(obj1.size == "large" && obj2.size == "large" && obj2.form == "box"){
+                return obj1.form != "table" && obj1.form != "plank" && obj1.form != "pyramid";
 
-                } else {
-                    return true;
-                }
-            case "above":
-                if(obj2.form == "ball") return false;
+            } else {
                 return true;
-            case "under":
-                if(obj1.form == "ball") return false;
-                return true;
-            case "leftof":
-            case "rightof":
-            case "beside":
-                return true;
-            default:
-                break;
+            }
+        case "above":
+            if(obj2.form == "ball") return false;
+            return true;
+        case "under":
+            if(obj1.form == "ball") return false;
+            return true;
+        case "leftof":
+        case "rightof":
+        case "beside":
+            return true;
+        default:
+            break;
         }
         return false;
     }
