@@ -122,15 +122,19 @@ module Interpreter {
 	    }
 	}
 	
-	return result + "\n\nPlease answer with a number.";
+	return result + "\n\nPlease answer with the corresponding number.";
+    }
+
+    function askClarificationQuestion(ents : string[], state : WorldState) : number {
+        return parseInt(prompt(getClarificationQuestion(ents, state)));
     }
     
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {            
         var interpretations : DNFFormula = [];
 	var ents : string[] = getEntities(cmd.entity, state);
 
-	if(ents.length > 1) {
-	    var index : number = parseInt(window.prompt(getClarificationQuestion(ents, state)));
+	if(ents.length > 1 && cmd.entity.quantifier == "the") {
+	    var index = askClarificationQuestion(ents, state);
 	    ents = ents.slice(index, index + 1);
 	}
 	
@@ -145,8 +149,8 @@ module Interpreter {
         case "move":
             var destEnts : string[] = getEntities(cmd.location.entity, state);
 
-	    if(destEnts.length > 1) {
-		var index : number = parseInt(window.prompt(getClarificationQuestion(destEnts, state)));
+	    if(destEnts.length > 1 && cmd.location.entity.quantifier == "the") {
+		var index = askClarificationQuestion(destEnts, state);
 		destEnts = destEnts.slice(index, index + 1);
 	    }
 	    
