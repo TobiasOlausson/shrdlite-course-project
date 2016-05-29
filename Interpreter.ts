@@ -149,6 +149,30 @@ module Interpreter {
                     }
                 });
                 break;
+            case "where":
+            case "exist":
+                var ents : string[] = getEntities(cmd.entity, state);
+                var result : string = "";
+                if(ents.length > 1 && cmd.command == "exists"){
+                    alert("Yes, several objects fitting the description exists");
+                } else if(ents.length > 1 && cmd.command == "where"){
+                    alert("Found several objects with that description!");
+                } else if(ents.length == 0){
+                    alert("Object could not be found!");
+                } else if (cmd.command == "exist") {
+                    var obj : ObjectDefinition = getWorldObject(ents[0], state);
+                    result = ("Yes, a " + obj.size + " " + obj.color + " " + obj.form + " exists.");
+                    alert(result);
+                } else if (cmd.command == "where"){
+                    var index = getIndex(ents[0], state);
+                    if(index != null){
+                        var obj : ObjectDefinition = getWorldObject(ents[0], state);
+                        var objDescr : string = ("A " + obj.size + " " + obj.color + " " + obj.form);
+                        result = (objDescr + " is located in column " + index.x + ", at height " + index.y + ".");
+                        alert(result);
+                    }
+                }
+                break;
             default:
                 break;
             }
@@ -190,7 +214,8 @@ module Interpreter {
 
     function getObjectStrings (state : WorldState) : string[] {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
-
+        if(state.holding != null)
+            objectStrings.push(state.holding);
         objectStrings.push("floor");
         return objectStrings;
     }
@@ -217,6 +242,50 @@ module Interpreter {
         });
 
         return result;
+    }
+
+    function relationCheckTripple(obj1 : string, obj2 : string, obj3 : string, relation : string, state : WorldState) : boolean {
+        if(obj1 == obj3){
+            return false;
+        }
+        if(obj1 == "floor" || obj2 == "floor" || obj3 == "floor")
+            return false;
+
+        var obj1X : number;
+        var obj2X : number;
+        var obj3X : number;
+        var obj1Y : number;
+        var obj2Y : number;
+        var obj3Y : number;
+
+        if(getIndex(obj1, state) != null){
+            obj1X = getIndex(obj1, state).x;
+            obj1Y = getIndex(obj1, state).y;
+        } else {
+            return false;
+        }
+
+        if(getIndex(obj2, state) != null){
+            obj2X = getIndex(obj2, state).x;
+            obj2Y = getIndex(obj2, state).y;
+        } else {
+            return false;
+        }
+
+        if(getIndex(obj3, state) != null){
+            obj3X = getIndex(obj3, state).x;
+            obj3Y = getIndex(obj3, state).y;
+        } else {
+            return false;
+        }
+
+        switch(relation){
+            case "between":
+                return ((obj1X - 1 == obj2X && obj1X + 1 == obj3X) ||
+                    (obj1X + 1 == obj2X && obj1X - 1 == obj3X));
+            default:
+                return false;
+        }
     }
 
     export function relationCheck (obj1 : string, obj2 : string, relation : string, state : WorldState) : boolean {
@@ -262,6 +331,8 @@ module Interpreter {
                 return obj1X < obj2X;
             case "rightof":
                 return obj1X > obj2X;
+            case "under":
+                return obj1X == obj2X && obj1Y < obj2Y;
             default:
                 return false;
         }
@@ -275,7 +346,7 @@ module Interpreter {
     }
 
     /** Find the index of an object in a world */
-    function getIndex(object : Parser.Object, state : WorldState) : Index {
+    function getIndex(object : string, state : WorldState) : Index {
         for(var x : number = 0; x < state.stacks.length; x++){
             for(var y : number = 0; y < state.stacks[x].length; y++){
                 if(state.stacks[x][y] == object){
@@ -349,6 +420,9 @@ module Interpreter {
                 }
             case "above":
                 if(obj2.form == "ball") return false;
+                return true;
+            case "under":
+                if(obj1.form == "ball") return false;
                 return true;
             case "leftof":
             case "rightof":
