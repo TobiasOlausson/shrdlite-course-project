@@ -28,8 +28,6 @@ module Planner {
             try {
                 var result : PlannerResult = <PlannerResult>interpretation;
                 result.plan = planInterpretation(result.interpretation, currentState);
-                // result.plan.push("new interpretation");
-                // result.plan.push(toString(result.interpretation));
 
                 if (result.plan.length == 0) {
                     result.plan.push("That is already true!");
@@ -84,7 +82,7 @@ module Planner {
         interpretation = interpret;
 
         var startState : State = new State(cloneState.stacks, cloneState.holding, cloneState.arm, null);
-
+        
         var path = aStarSearch(new StateGraph(), startState, isGoal, heuristics, timeout);
         path.path.forEach((s) => {
             if(s.action != null)
@@ -230,6 +228,7 @@ module Planner {
                     case "beside":
                     case "leftof":
                     case "rightof":
+                    case "under":
                     case "ontop":
                         var worldState : WorldState = clone(initialWorld);
                         worldState.arm = state.arm;
