@@ -119,19 +119,38 @@ module Interpreter {
             case "move":
                 var ents : string[] = getEntities(cmd.entity, state);
                 var destEnts : string[] = getEntities(cmd.location.entity, state);
-                ents.forEach((ent) => {
-                    var obj = getWorldObject(ent, state);
 
-                    destEnts.forEach((destEnt) => {
-                        var destObj = getWorldObject(destEnt, state);
+                // special case for between
+                if(cmd.location.entity2 != null){
+                    var destEnts2 : string[] = getEntities(cmd.location.entity2, state);
 
-                        if (constraints(obj, destObj, cmd.location.relation)){
-                            interpretations.push([{polarity: true, 
-                                relation: cmd.location.relation, 
-                                args: [ent, destEnt]}]);
+                    ents.forEach((ent) => {
+                        var obj = getWorldObject(ent, state);
+                        for(var i = 0; i < destEnts.length && i < destEnts2.length; i++){
+                            var destObj1 = getWorldObject(destEnts[i], state);
+                            var destObj2 = getWorldObject(destEnts2[i], state);
+                            if (constraintsTriple(obj, destObj1, destObj2, cmd.location.relation)){
+                                interpretations.push([{polarity: true, 
+                                    relation: cmd.location.relation, 
+                                    args: [ent, destEnts[i], destEnts2[i]]}]);
+                            }
                         }
                     });
-                });
+                } else {
+                    ents.forEach((ent) => {
+                        var obj = getWorldObject(ent, state);
+
+                        destEnts.forEach((destEnt) => {
+                            var destObj = getWorldObject(destEnt, state);
+
+                            if (constraints(obj, destObj, cmd.location.relation)){
+                                interpretations.push([{polarity: true, 
+                                    relation: cmd.location.relation, 
+                                    args: [ent, destEnt]}]);
+                            }
+                        });
+                    });
+                }
                 break;
             case "put":
                 if(state.holding == null)
@@ -139,18 +158,32 @@ module Interpreter {
 
                 var obj = getWorldObject(state.holding, state);
                 var destEnts = getEntities(cmd.location.entity, state);
-                destEnts.forEach((destEnt) => {
-                    var destObj = getWorldObject(destEnt, state);
-
-                    if (constraints(obj, destObj, cmd.location.relation)){
-                        interpretations.push([{polarity: true, 
-                            relation: cmd.location.relation, 
-                            args: [state.holding, destEnt]}]);
+                if(cmd.location.entity2 != null){
+                    var destEnts2 : string[] = getEntities(cmd.location.entity2, state);
+                    for(var i = 0; i < destEnts.length && i < destEnts2.length; i++){
+                        var destObj1 = getWorldObject(destEnts[i], state);
+                        var destObj2 = getWorldObject(destEnts2[i], state);
+                        if (constraintsTriple(obj, destObj1, destObj2, cmd.location.relation)){
+                            interpretations.push([{polarity: true, 
+                                relation: cmd.location.relation, 
+                                args: [state.holding, destEnts[i], destEnts2[i]]}]);
+                        }
                     }
-                });
+                } else {
+                    destEnts.forEach((destEnt) => {
+                        var destObj = getWorldObject(destEnt, state);
+
+                        if (constraints(obj, destObj, cmd.location.relation)){
+                            interpretations.push([{polarity: true, 
+                                relation: cmd.location.relation, 
+                                args: [state.holding, destEnt]}]);
+                        }
+                    });
+                }
                 break;
             case "where":
             case "exist":
+                // Handles the cases of where and exists, questions from the user
                 var ents : string[] = getEntities(cmd.entity, state);
                 var result : string = "";
                 if(ents.length > 1 && cmd.command == "exists"){
@@ -187,13 +220,39 @@ module Interpreter {
         var result : string[] = getObjects(entity.object, state);
         return result;
     }
+
     function getObjects(obj : Parser.Object, state : WorldState) : string[] {
         if(obj.location == null){
             return withDescription(obj, state);
-        }else{
-            var result : string[] = locationCheck(getObjects(obj.object, state), obj.location.relation, getEntities(obj.location.entity, state), state);
+        }else if(obj.location.relation == "between"){
+            var result : string[] = locationCheckTriple(getObjects(obj.object, state), 
+                obj.location.relation, getEntities(obj.location.entity, state), 
+                getEntities(obj.location.entity2, state), state);
+            return result;
+        } else {
+            var result : string[] = locationCheck(getObjects(obj.object, state), 
+                obj.location.relation, getEntities(obj.location.entity, state), state);
             return result;
         }
+    }
+
+    function locationCheckTriple(objectStrings : string[], relation : string, locObjStrings1 : string[], 
+        locObjStrings2 : string[], state : WorldState): string[] {
+        var result : string[] = [];
+
+        objectStrings.forEach((objStr) => {
+
+            locObjStrings1.forEach((locStr1) => {
+                locObjStrings2.forEach((locStr2) => {
+                    if(relationCheckTriple(objStr, locStr1, locStr2, relation, state)) {
+                        if(result.indexOf(objStr) == -1){
+                            result.push(objStr);
+                        } 
+                    }
+                });
+            });
+        });
+        return result;
     }
 
     function locationCheck(objectStrings : string[], relation : string, locObjStrings : string[], state : WorldState): string[] {
@@ -201,17 +260,18 @@ module Interpreter {
 
         objectStrings.forEach((objStr) => {
 
-                locObjStrings.forEach((locStr) => {
-                    if(relationCheck(objStr, locStr, relation, state)) {
-                        if(result.indexOf(objStr) == -1){
-                            result.push(objStr);
-                        } 
-                    }
-                });
+            locObjStrings.forEach((locStr) => {
+                if(relationCheck(objStr, locStr, relation, state)) {
+                    if(result.indexOf(objStr) == -1){
+                        result.push(objStr);
+                    } 
+                }
             });
+        });
         return result;
     }
 
+    /** Returns the string representation of all objects in the world. */
     function getObjectStrings (state : WorldState) : string[] {
         var objectStrings : string[] = Array.prototype.concat.apply([], state.stacks);
         if(state.holding != null)
@@ -222,13 +282,14 @@ module Interpreter {
 
     export function getWorldObject (objectString : string, state : WorldState) : ObjectDefinition {
         var objects = state.objects;
-
+        // Adds the floor to the list of objects
         if(objectString == "floor")
             return { "form":"floor",   "size":"",  "color":"" };
         else
             return objects[objectString];
     }
 
+    /** Finds objects matching another objects description. */
     function withDescription(obj : Parser.Object, state : WorldState) : string[] {
         var result : string[] = [];
         var objectStrings : string[] = getObjectStrings(state);
@@ -244,8 +305,8 @@ module Interpreter {
         return result;
     }
 
-    function relationCheckTripple(obj1 : string, obj2 : string, obj3 : string, relation : string, state : WorldState) : boolean {
-        if(obj1 == obj3){
+    export function relationCheckTriple(obj1 : string, obj2 : string, obj3 : string, relation : string, state : WorldState) : boolean {
+        if(obj1 == obj3 || obj1 == obj2 || obj2 == obj3){
             return false;
         }
         if(obj1 == "floor" || obj2 == "floor" || obj3 == "floor")
@@ -281,19 +342,21 @@ module Interpreter {
 
         switch(relation){
             case "between":
-                return ((obj1X - 1 == obj2X && obj1X + 1 == obj3X) ||
-                    (obj1X + 1 == obj2X && obj1X - 1 == obj3X));
+                return ((obj1X > obj2X && obj1X < obj3X) ||
+                    (obj1X < obj2X && obj1X > obj3X));
             default:
                 return false;
         }
     }
-
+    /** Checks if the relation of two objects holds. */
     export function relationCheck (obj1 : string, obj2 : string, relation : string, state : WorldState) : boolean {
         if(obj1 == obj2){
             return false;
         }
 
-        if(obj1 == "floor") return false;
+        if(obj1 == "floor")
+            return false;
+
         var obj1X : number;
         var obj2X : number;
         var obj1Y : number;
@@ -316,6 +379,7 @@ module Interpreter {
             return false;
         }
 
+        // Compares indices depending on the relation
         switch(relation){
             case "inside":
                 return constraints(getWorldObject(obj1,state), 
@@ -364,7 +428,8 @@ module Interpreter {
     }
 
     export function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
-        if(obj1.form == "floor") return false;
+        if(obj1.form == "floor")
+            return false;
 
         // shouldnt be needed, check elsewhere
         if(obj1 == obj2)
@@ -428,6 +493,23 @@ module Interpreter {
             case "rightof":
             case "beside":
                 return true;
+            default:
+                break;
+        }
+        return false;
+    }
+
+    export function constraintsTriple (obj1 : Parser.Object, obj2 : Parser.Object, obj3 : Parser.Object, relation : string) : boolean {
+        if(obj1.form == "floor")
+            return false;
+
+        // shouldnt be needed, check elsewhere
+        if(obj1 == obj3 || obj1 == obj2 || obj2 == obj3)
+            return false;
+
+        switch(relation) {
+            case "between":
+                return obj1 != "floor" && obj2 != "floor" && obj3 != "floor";
             default:
                 break;
         }

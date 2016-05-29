@@ -67,6 +67,8 @@ module Parser {
         relation : string;
 	/** The entity relative to which the preposition should be interpreted. */
         entity : Entity;
+
+        entity2 : Entity;
     }
 
     /** 

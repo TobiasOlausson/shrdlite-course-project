@@ -238,6 +238,15 @@ module Planner {
 
                         return Interpreter.relationCheck(literal.args[0], 
                             literal.args[1], literal.relation, worldState);
+                    case "between":
+                        var worldState : WorldState = clone(initialWorld);
+                        worldState.arm = state.arm;
+                        worldState.stacks = state.stacks;
+                        worldState.holding = state.holding;
+                        worldState.objects = objects;
+
+                        return Interpreter.relationCheckTriple(literal.args[0], 
+                            literal.args[1], literal.args[2], literal.relation, worldState);
                     default:
                         return false;
                 }
