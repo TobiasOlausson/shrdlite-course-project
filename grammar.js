@@ -44,7 +44,7 @@ var grammar = {
     {"name": "command", "symbols": ["where_is", "entity"], "postprocess": R({command:"where", entity:1})},
     {"name": "command", "symbols": ["is_there", "entity"], "postprocess": R({command:"exist", entity:1})},
     {"name": "location", "symbols": ["relation", "entity"], "postprocess": R({relation:0, entity:1})},
-    {"name": "location", "symbols": ["between", "entity", "entity2"], "postprocess": R({relation:0, entity:1, entity2:2    })},
+    {"name": "location", "symbols": ["between", "entity", "and", "entity2"], "postprocess": R({relation:0, entity:1, entity2:3})},
     {"name": "entity", "symbols": ["quantifierSG", "objectSG"], "postprocess": R({quantifier:0, object:1})},
     {"name": "entity", "symbols": ["quantifierPL", "objectPL"], "postprocess": R({quantifier:0, object:1})},
     {"name": "entity2", "symbols": ["quantifierSG", "objectSG"], "postprocess": R({quantifier:0, object:1})},
