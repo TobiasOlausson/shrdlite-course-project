@@ -44,10 +44,13 @@ command --> where_is entity  {% R({command:"where", entity:1}) %}
 command --> is_there entity  {% R({command:"exist", entity:1}) %}
 
 location --> relation entity  {% R({relation:0, entity:1}) %}
-location --> between entity and entity  {% R({relation:0, entity:2}) %}
+location --> between entity entity2  {% R({relation:0, entity:1, entity2:2    }) %}
 
 entity --> quantifierSG objectSG  {% R({quantifier:0, object:1}) %}
 entity --> quantifierPL objectPL  {% R({quantifier:0, object:1}) %}
+
+entity2 --> quantifierSG objectSG  {% R({quantifier:0, object:1}) %}
+entity2 --> quantifierPL objectPL  {% R({quantifier:0, object:1}) %}
 
 objectSG --> objectSG that_is:?  location  {% R({object:0, location:2}) %}
 objectPL --> objectPL that_are:? location  {% R({object:0, location:2}) %}
