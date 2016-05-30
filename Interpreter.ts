@@ -120,7 +120,7 @@ module Interpreter {
                 var ents : string[] = getEntities(cmd.entity, state);
                 var destEnts : string[] = getEntities(cmd.location.entity, state);
 
-                // special case for between
+                // The case where there's a triple relation
                 if(cmd.location.entity2 != null){
                     var destEnts2 : string[] = getEntities(cmd.location.entity2, state);
 
@@ -158,6 +158,7 @@ module Interpreter {
 
                 var obj = getWorldObject(state.holding, state);
                 var destEnts = getEntities(cmd.location.entity, state);
+                // The case where there's a triple relation
                 if(cmd.location.entity2 != null){
                     var destEnts2 : string[] = getEntities(cmd.location.entity2, state);
                     for(var i = 0; i < destEnts.length && i < destEnts2.length; i++){
@@ -236,6 +237,7 @@ module Interpreter {
         }
     }
 
+    /** In addition to locationCheck to handle triple relations. */
     function locationCheckTriple(objectStrings : string[], relation : string, locObjStrings1 : string[], 
         locObjStrings2 : string[], state : WorldState): string[] {
         var result : string[] = [];
@@ -305,6 +307,7 @@ module Interpreter {
         return result;
     }
 
+    /** In addition to relationCheck to handle triple relations. */
     export function relationCheckTriple(obj1 : string, obj2 : string, obj3 : string, relation : string, state : WorldState) : boolean {
         if(obj1 == obj3 || obj1 == obj2 || obj2 == obj3){
             return false;
@@ -499,7 +502,9 @@ module Interpreter {
         return false;
     }
 
-    export function constraintsTriple (obj1 : Parser.Object, obj2 : Parser.Object, obj3 : Parser.Object, relation : string) : boolean {
+    /** In addition to constrains to handle triple relations. */
+    export function constraintsTriple (obj1 : Parser.Object, obj2 : Parser.Object, 
+        obj3 : Parser.Object, relation : string) : boolean {
         if(obj1.form == "floor")
             return false;
 
