@@ -3,39 +3,39 @@
 ///<reference path="lib/collections.ts"/>
 
 /**
-* Interpreter module
-*
-* The goal of the Interpreter module is to interpret a sentence
-* written by the user in the context of the current world state. In
-* particular, it must figure out which objects in the world,
-* i.e. which elements in the `objects` field of WorldState, correspond
-* to the ones referred to in the sentence.
-*
-* Moreover, it has to derive what the intended goal state is and
-* return it as a logical formula described in terms of literals, where
-* each literal represents a relation among objects that should
-* hold. For example, assuming a world state where "a" is a ball and
-* "b" is a table, the command "put the ball on the table" can be
-* interpreted as the literal ontop(a,b). More complex goals can be
-* written using conjunctions and disjunctions of these literals.
-*
-* In general, the module can take a list of possible parses and return
-* a list of possible interpretations, but the code to handle this has
-* already been written for you. The only part you need to implement is
-* the core interpretation function, namely `interpretCommand`, which produces a
-* single interpretation for a single command.
-*/
+ * Interpreter module
+ *
+ * The goal of the Interpreter module is to interpret a sentence
+ * written by the user in the context of the current world state. In
+ * particular, it must figure out which objects in the world,
+ * i.e. which elements in the `objects` field of WorldState, correspond
+ * to the ones referred to in the sentence.
+ *
+ * Moreover, it has to derive what the intended goal state is and
+ * return it as a logical formula described in terms of literals, where
+ * each literal represents a relation among objects that should
+ * hold. For example, assuming a world state where "a" is a ball and
+ * "b" is a table, the command "put the ball on the table" can be
+ * interpreted as the literal ontop(a,b). More complex goals can be
+ * written using conjunctions and disjunctions of these literals.
+ *
+ * In general, the module can take a list of possible parses and return
+ * a list of possible interpretations, but the code to handle this has
+ * already been written for you. The only part you need to implement is
+ * the core interpretation function, namely `interpretCommand`, which produces a
+ * single interpretation for a single command.
+ */
 module Interpreter {
 
     //////////////////////////////////////////////////////////////////////
     // exported functions, classes and interfaces/types
 
     /**
-    Top-level function for the Interpreter. It calls `interpretCommand` for each possible parse of the command. No need to change this one.
-    * @param parses List of parses produced by the Parser.
-    * @param currentState The current state of the world.
-    * @returns Augments ParseResult with a list of interpretations. Each interpretation is represented by a list of Literals.
-    */
+       Top-level function for the Interpreter. It calls `interpretCommand` for each possible parse of the command. No need to change this one.
+       * @param parses List of parses produced by the Parser.
+       * @param currentState The current state of the world.
+       * @returns Augments ParseResult with a list of interpretations. Each interpretation is represented by a list of Literals.
+       */
     export function interpret(parses : Parser.ParseResult[], currentState : WorldState) : InterpretationResult[] {
         var errors : Error[] = [];  
         var interpretations : InterpretationResult[] = [];
@@ -46,7 +46,7 @@ module Interpreter {
                 if(intprt != null){
                     result.interpretation = intprt;
                     interpretations.push(result);
-                }
+                } 
             } catch(err) {
                 errors.push(err);
             }
@@ -67,9 +67,9 @@ module Interpreter {
     type Conjunction = Literal[];
 
     /**
-    * A Literal represents a relation that is intended to
-    * hold among some objects.
-    */
+     * A Literal represents a relation that is intended to
+     * hold among some objects.
+     */
     export interface Literal {
         /** Whether this literal asserts the relation should hold
          * (true polarity) or not (false polarity). For example, we
@@ -104,12 +104,43 @@ module Interpreter {
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
      * @throws An error when no valid interpretations can be found
      */
+
+    function getClarificationQuestion(ents : string[], state : WorldState) : string {
+    	var result : string = "Did you mean:\n";
+    	
+    	for (var i = 0; i < ents.length; i++) {
+    	    var obj = getWorldObject(ents[i], state);
+    	    var descr : string = "(" + i + ") the " + obj.size + " " + obj.color + " " + obj.form;
+    	    console.log("Object description" + descr);
+
+    	    if (i == 0) {
+    		result = result.concat("\n" + descr);
+    	    } else if (i < ents.length - 1) {
+    		result = result.concat(", \n" + descr);
+    	    } else {
+    		result = result.concat(" or \n" + descr + "?");
+    	    }
+    	}
+	
+	   return result + "\n\nPlease answer with the corresponding number.";
+    }
+
+    function askClarificationQuestion(ents : string[], state : WorldState) : number {
+        return parseInt(prompt(getClarificationQuestion(ents, state)));
+    }
     
-    function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {            
+    function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
         var interpretations : DNFFormula = [];
+
+        var ents : string[] = getEntities(cmd.entity, state);
+
+        if(ents.length > 1 && cmd.entity.quantifier == "the") {
+            var index = askClarificationQuestion(ents, state);
+            ents = ents.slice(index, index + 1);
+        }
+
         switch(cmd.command){
             case "take":
-                var ents : string[] = getEntities(cmd.entity, state);
                 ents.forEach((objStr) => {
                     if(objStr != "floor")
                         interpretations.push([{polarity: true, relation: "holding", 
@@ -117,8 +148,12 @@ module Interpreter {
                 });
                 break;
             case "move":
-                var ents : string[] = getEntities(cmd.entity, state);
                 var destEnts : string[] = getEntities(cmd.location.entity, state);
+
+                if(destEnts.length > 1 && cmd.location.entity.quantifier == "the") {
+                    var index = askClarificationQuestion(destEnts, state);
+                    destEnts = destEnts.slice(index, index + 1);
+                }
 
                 // The case where there's a triple relation
                 if(cmd.location.entity2 != null){
@@ -127,9 +162,7 @@ module Interpreter {
                     ents.forEach((ent) => {
                         var obj = getWorldObject(ent, state);
                         for(var i = 0; i < destEnts.length && i < destEnts2.length; i++){
-                            var destObj1 = getWorldObject(destEnts[i], state);
-                            var destObj2 = getWorldObject(destEnts2[i], state);
-                            if (constraintsTriple(obj, destObj1, destObj2, cmd.location.relation)){
+                            if (constraintsTriple(ent, destEnts[i], destEnts2[i], cmd.location.relation, state)){
                                 interpretations.push([{polarity: true, 
                                     relation: cmd.location.relation, 
                                     args: [ent, destEnts[i], destEnts2[i]]}]);
@@ -143,7 +176,7 @@ module Interpreter {
                         destEnts.forEach((destEnt) => {
                             var destObj = getWorldObject(destEnt, state);
 
-                            if (constraints(obj, destObj, cmd.location.relation)){
+                            if (constraints(ent, destEnt, cmd.location.relation, state)){
                                 interpretations.push([{polarity: true, 
                                     relation: cmd.location.relation, 
                                     args: [ent, destEnt]}]);
@@ -156,15 +189,13 @@ module Interpreter {
                 if(state.holding == null)
                     break;
 
-                var obj = getWorldObject(state.holding, state);
+                // var obj = getWorldObject(state.holding, state);
                 var destEnts = getEntities(cmd.location.entity, state);
                 // The case where there's a triple relation
                 if(cmd.location.entity2 != null){
                     var destEnts2 : string[] = getEntities(cmd.location.entity2, state);
                     for(var i = 0; i < destEnts.length && i < destEnts2.length; i++){
-                        var destObj1 = getWorldObject(destEnts[i], state);
-                        var destObj2 = getWorldObject(destEnts2[i], state);
-                        if (constraintsTriple(obj, destObj1, destObj2, cmd.location.relation)){
+                        if (constraintsTriple(state.holding, destEnts[i], destEnts2[i], cmd.location.relation, state)){
                             interpretations.push([{polarity: true, 
                                 relation: cmd.location.relation, 
                                 args: [state.holding, destEnts[i], destEnts2[i]]}]);
@@ -172,9 +203,8 @@ module Interpreter {
                     }
                 } else {
                     destEnts.forEach((destEnt) => {
-                        var destObj = getWorldObject(destEnt, state);
 
-                        if (constraints(obj, destObj, cmd.location.relation)){
+                        if (constraints(state.holding, destEnt, cmd.location.relation, state)){
                             interpretations.push([{polarity: true, 
                                 relation: cmd.location.relation, 
                                 args: [state.holding, destEnt]}]);
@@ -185,7 +215,6 @@ module Interpreter {
             case "where":
             case "exist":
                 // Handles the cases of where and exists, questions from the user
-                var ents : string[] = getEntities(cmd.entity, state);
                 var result : string = "";
                 if(ents.length > 1 && cmd.command == "exists"){
                     alert("Yes, several objects fitting the description exists");
@@ -198,11 +227,11 @@ module Interpreter {
                     result = ("Yes, a " + obj.size + " " + obj.color + " " + obj.form + " exists.");
                     alert(result);
                 } else if (cmd.command == "where"){
-                    var index = getIndex(ents[0], state);
+                    var pos = getIndex(ents[0], state);
                     if(index != null){
                         var obj : ObjectDefinition = getWorldObject(ents[0], state);
                         var objDescr : string = ("A " + obj.size + " " + obj.color + " " + obj.form);
-                        result = (objDescr + " is located in column " + index.x + ", at height " + index.y + ".");
+                        result = (objDescr + " is located in column " + pos.x + ", at height " + pos.y + ".");
                         alert(result);
                     }
                 }
@@ -225,7 +254,7 @@ module Interpreter {
     function getObjects(obj : Parser.Object, state : WorldState) : string[] {
         if(obj.location == null){
             return withDescription(obj, state);
-        }else if(obj.location.relation == "between"){
+        }else if(obj.location.entity2 != null){
             var result : string[] = locationCheckTriple(getObjects(obj.object, state), 
                 obj.location.relation, getEntities(obj.location.entity, state), 
                 getEntities(obj.location.entity2, state), state);
@@ -243,7 +272,6 @@ module Interpreter {
         var result : string[] = [];
 
         objectStrings.forEach((objStr) => {
-
             locObjStrings1.forEach((locStr1) => {
                 locObjStrings2.forEach((locStr2) => {
                     if(relationCheckTriple(objStr, locStr1, locStr2, relation, state)) {
@@ -385,21 +413,20 @@ module Interpreter {
         // Compares indices depending on the relation
         switch(relation){
             case "inside":
-                return constraints(getWorldObject(obj1,state), 
-                    getWorldObject(obj2, state), "inside") && obj1X == obj2X && 
+                return constraints(obj1, obj2, relation, state) && obj1X == obj2X && 
                     obj1Y == obj2Y + 1;
             case "ontop":
                 return obj1X == obj2X && obj1Y == obj2Y + 1;
             case "above":
                 return obj1X == obj2X && obj1Y > obj2Y;
+            case "under":
+                return obj1X == obj2X && obj1Y < obj2Y;
             case "beside":
                 return obj1X == obj2X + 1 || obj1X == obj2X - 1;
             case "leftof":
                 return obj1X < obj2X;
             case "rightof":
                 return obj1X > obj2X;
-            case "under":
-                return obj1X == obj2X && obj1Y < obj2Y;
             default:
                 return false;
         }
@@ -430,9 +457,11 @@ module Interpreter {
             (objectDef.color == color || color == null);
     }
 
-    export function constraints (obj1 : Parser.Object, obj2 : Parser.Object, relation : string) : boolean {
-        if(obj1.form == "floor")
-            return false;
+    export function constraints (objStr1 : string, objStr2 : string, relation : string, state : WorldState) : boolean {
+        var obj1 = getWorldObject(objStr1, state);
+        var obj2 = getWorldObject(objStr2, state);
+
+        if(obj1.form == "floor") return false;
 
         // shouldnt be needed, check elsewhere
         if(obj1 == obj2)
@@ -449,13 +478,13 @@ module Interpreter {
                 if(obj2.size == "small"){
                     return obj1.size == "small" && 
                         (obj1.form == "ball" || obj1.form == "brick" 
-                            || obj1.form == "table");
+                         || obj1.form == "table");
                 } else {
                     return obj1.size == "small" || 
                         (obj1.form != "pyramid" && obj1.form != "box" 
-                            && obj1.form != "plank");
+                         && obj1.form != "plank");
                 }
-            // special cases for ball and box
+                // special cases for ball and box
             case "ontop":
                 // cant place objects on balls
                 if(obj2.form == "ball")
@@ -473,16 +502,15 @@ module Interpreter {
                 // cant put a large table ontop some small objects
                 if(obj1.size == "large" && obj2.size == "small"){
                     return !(obj1.form == "table" && (obj2.form == "box" 
-                        || obj2.form == "brick" || obj2.form == "pyramid"));
+    						  || obj2.form == "brick" || obj2.form == "pyramid"));
 
-                // cant put a small object ontop a large box
+                    // cant put a small object ontop a large box
                 } else if(obj1.size == "small" && obj2.size == "large" && obj2.form == "box"){
                     return false;
 
-                // only certain objects can be placed ontop of a large box
+                    // only certain objects can be placed ontop of a large box
                 } else if(obj1.size == "large" && obj2.size == "large" && obj2.form == "box"){
                     return obj1.form != "table" && obj1.form != "plank" && obj1.form != "pyramid";
-
                 } else {
                     return true;
                 }
@@ -503,8 +531,12 @@ module Interpreter {
     }
 
     /** In addition to constrains to handle triple relations. */
-    export function constraintsTriple (obj1 : Parser.Object, obj2 : Parser.Object, 
-        obj3 : Parser.Object, relation : string) : boolean {
+    export function constraintsTriple (objStr1 : string, objStr2 : string, 
+        objStr3 : string, relation : string, state : WorldState) : boolean {
+        var obj1 = getWorldObject(objStr1, state);
+        var obj2 = getWorldObject(objStr2, state);
+        var obj3 = getWorldObject(objStr3, state);
+
         if(obj1.form == "floor")
             return false;
 
@@ -514,7 +546,7 @@ module Interpreter {
 
         switch(relation) {
             case "between":
-                return obj1 != "floor" && obj2 != "floor" && obj3 != "floor";
+                return objStr1 != "floor" && objStr2 != "floor" && objStr3 != "floor";
             default:
                 break;
         }

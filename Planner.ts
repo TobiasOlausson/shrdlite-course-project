@@ -91,8 +91,33 @@ module Planner {
 
         return plan;
     }
+    class State {
+
+        constructor(
+            public stacks : Stack[], 
+            public holding : string, 
+            public arm: number, 
+            public action :string
+        ) { }
+
+        // Enables the use of hashmaps in aStarSearch /André
+        public toString = (): string => {
+            return (this.stacks + this.holding + this.arm + this.action);
+        }
+
+    }
+
+    function getWorldState(state : State) : WorldState{
+            var worldState : WorldState = clone(initialWorld);
+            worldState.arm = state.arm;
+            worldState.stacks = state.stacks;
+            worldState.holding = state.holding;
+            worldState.objects = objects;
+            return worldState;
+        }
 
     function heuristics(state : State) : number {
+        var endResult : number = Infinity;
         var result : number = 0;
         var numAbove : number = 0;
         var armDist : number = 0;
@@ -127,6 +152,12 @@ module Planner {
                             nearest = Math.min(armDist1, armDist2); 
                         }
 
+                        if(isAbove(literal.args[0], literal.args[1], state)) {
+                            numAbove2 = numAbove2 - numAbove1;
+                        }else if(isAbove(literal.args[1], literal.args[0], state)) {
+                            numAbove1 = numAbove1 - numAbove2;
+                        }
+
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
                         result = nearest + dist + (numAbove1 + numAbove2)*3 + 2 ;
@@ -135,8 +166,8 @@ module Planner {
                             result += 1;
                         }
                         return;
-                    case "above":
-                        numAbove = objectsAbove(literal.args[0], state);
+                    case "under":
+                        numAbove = objectsAbove(literal.args[1], state);
 
                         var armDist1 = armDistance(literal.args[0], state);
                         var armDist2 = armDistance(literal.args[1], state);
@@ -144,6 +175,24 @@ module Planner {
                         var nearest : number = Math.min(armDist1, armDist2);
 
                         result = numAbove*4 + dist + nearest;
+                        return;
+                    case "above":
+                        numAbove = objectsAbove(literal.args[0], state);
+
+                        var canPut : boolean = true;
+                        if(!(state.holding == literal.args[1]) ){
+                            canPut = Interpreter.constraints(literal.args[0], getTopOfStack(literal.args[1], state), literal.relation, getWorldState(state) ) ;
+
+                        }
+                        var armDist1 = armDistance(literal.args[0], state);
+                        var armDist2 = armDistance(literal.args[1], state);
+                        var dist : number = distBetween(literal.args[0], literal.args[1], state);
+                        var nearest : number = Math.min(armDist1, armDist2);
+
+                        result = numAbove*4 + dist + nearest;
+                        if(!canPut){
+                            result = result + 3;
+                        }
                         return;
 
                     case "leftof":
@@ -161,8 +210,42 @@ module Planner {
 
                 }
             });
+
+            if (result < endResult){
+                endResult = result;
+            }
+        });
+        return endResult;
+    }
+    function getTopOfStack(object: string, state : State) : string{
+        var result : string = "";
+        var index : number = -1;
+        state.stacks.forEach((stack) => {
+            index = stack.indexOf(object);
+            if (index != -1){
+                result = stack[stack.length-1];
+                return;
+            }
         });
         return result;
+
+    }
+
+    function isAbove(object1 : string, object2 : string, state: State) : boolean{
+        var result : boolean = false;
+        var index1 : number = -1;
+        var index2 : number = -1;
+        state.stacks.forEach((stack) => {
+            index2 = stack.indexOf(object2);
+            if (index1 != -1){
+                index1 = stack.indexOf(object1);
+
+                result = index1>index2;
+                return;
+            }
+        });
+        return result;
+
     }
 
     function distBetween(object1 : string, object2 : string, state: State) : number{
@@ -230,6 +313,7 @@ module Planner {
                     case "rightof":
                     case "under":
                     case "ontop":
+                    case "under":
                         var worldState : WorldState = clone(initialWorld);
                         worldState.arm = state.arm;
                         worldState.stacks = state.stacks;
@@ -255,15 +339,6 @@ module Planner {
         return res;
     }
 
-    class State {
-
-        constructor(
-            public stacks : Stack[], 
-            public holding : string, 
-            public arm: number, 
-            public action :string
-        ){}
-    }
 
     class StateGraph implements Graph<State> {
 
@@ -335,11 +410,12 @@ module Planner {
 
                     if(length > 0){
                         var below : string = newState.stacks[x][y];
-                        var belowObject : Parser.Object = objects[below];
-                        var ontopObject : Parser.Object = objects[newState.holding];
+                        var ontop : string = newState.holding;
+                        // var belowObject : Parser.Object = objects[below];
+                        // var ontopObject : Parser.Object = objects[newState.holding];
 
-                        if(Interpreter.constraints(ontopObject, belowObject, "ontop")
-                            || Interpreter.constraints(ontopObject, belowObject, "inside")){
+                        if(Interpreter.constraints(ontop, below, "ontop", getWorldState(state))
+                            || Interpreter.constraints(ontop, below, "inside", getWorldState(state))){
                             newState.stacks[x].push(newState.holding);
                             newState.holding = null;
                             newState.action = action;
