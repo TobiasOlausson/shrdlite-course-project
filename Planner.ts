@@ -204,6 +204,14 @@ module Planner {
                         result = numAbove*4 + dist + armDist;
                         return;
 
+                    case "between":
+                        var dist1 : number = distBetween(literal.args[0], literal.args[1], state) - 1;
+                        var dist2 : number = distBetween(literal.args[0], literal.args[1], state) - 1;
+                        numAbove = objectsAbove(literal.args[0], state);
+                        armDist = armDistance(literal.args[0], state);
+
+                        result = numAbove*4 + dist1 + dist2 + armDist;
+                        return;
                     default: 
                         result = 0;
                         return;
@@ -303,7 +311,13 @@ module Planner {
     function isGoal(state : State) : boolean {
         var res = interpretation.some(function (interp) {
             return interp.every(function (literal) {
-                switch(literal.relation){
+
+                var worldState : WorldState = clone(initialWorld);
+                worldState.arm = state.arm;
+                worldState.stacks = state.stacks;
+                worldState.holding = state.holding;
+                worldState.objects = objects;
+                switch(literal.relation){   
                     case "holding":
                         return (literal.args[0] == state.holding);
                     case "inside":
@@ -314,21 +328,9 @@ module Planner {
                     case "under":
                     case "ontop":
                     case "under":
-                        var worldState : WorldState = clone(initialWorld);
-                        worldState.arm = state.arm;
-                        worldState.stacks = state.stacks;
-                        worldState.holding = state.holding;
-                        worldState.objects = objects;
-
                         return Interpreter.relationCheck(literal.args[0], 
                             literal.args[1], literal.relation, worldState);
                     case "between":
-                        var worldState : WorldState = clone(initialWorld);
-                        worldState.arm = state.arm;
-                        worldState.stacks = state.stacks;
-                        worldState.holding = state.holding;
-                        worldState.objects = objects;
-
                         return Interpreter.relationCheckTriple(literal.args[0], 
                             literal.args[1], literal.args[2], literal.relation, worldState);
                     default:
