@@ -128,7 +128,7 @@ module Interpreter {
     function askClarificationQuestion(ents : string[], state : WorldState) : number {
         return parseInt(prompt(getClarificationQuestion(ents, state)));
     }
-    
+
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
         var interpretations : DNFFormula = [];
 
@@ -238,7 +238,7 @@ module Interpreter {
                 break;
             default:
                 break;
-            }
+        }
         if(interpretations.length == 0) 
             return null;
         return interpretations;
