@@ -217,16 +217,21 @@ module Interpreter {
                 // Handles the cases of where and exists - questions from the user
                 var result : string = "";
                 if(ents.length > 1 && cmd.command == "exists"){
+                    // Several objects were found
                     alert("Yes, several objects fitting the description exists");
                 } else if(ents.length > 1 && cmd.command == "where"){
+                    // ambigious result
                     alert("Found several objects with that description!");
                 } else if(ents.length == 0){
+                    // no objects were found
                     alert("Object could not be found!");
                 } else if (cmd.command == "exist") {
+                    // Gets the objects description and shows it as an alert
                     var obj : ObjectDefinition = getWorldObject(ents[0], state);
                     result = ("Yes, a " + obj.size + " " + obj.color + " " + obj.form + " exists.");
                     alert(result);
                 } else if (cmd.command == "where"){
+                    // Gets the objects position and shows it as an alert
                     var pos = getIndex(ents[0], state);
                     if(pos != null){
                         var obj : ObjectDefinition = getWorldObject(ents[0], state);
@@ -245,8 +250,6 @@ module Interpreter {
     }
 
     function getEntities(entity : Parser.Entity, state: WorldState) : string[]{ 
-
-        //TODO handle quantifiers
         var result : string[] = getObjects(entity.object, state);
         return result;
     }
@@ -254,6 +257,7 @@ module Interpreter {
     function getObjects(obj : Parser.Object, state : WorldState) : string[] {
         if(obj.location == null){
             return withDescription(obj, state);
+        // The case where there is a third object in the relation
         }else if(obj.location.entity2 != null){
             var result : string[] = locationCheckTriple(getObjects(obj.object, state), 
                 obj.location.relation, getEntities(obj.location.entity, state), 
@@ -285,6 +289,7 @@ module Interpreter {
         return result;
     }
 
+    /** Returns a list of strings containing the objects that fit the relation.  */
     function locationCheck(objectStrings : string[], relation : string, locObjStrings : string[], state : WorldState): string[] {
         var result : string[] = [];
 
@@ -310,6 +315,7 @@ module Interpreter {
         return objectStrings;
     }
 
+    /** Get an object in the world given its name. */
     export function getWorldObject (objectString : string, state : WorldState) : ObjectDefinition {
         var objects = state.objects;
         // Adds the floor to the list of objects

@@ -116,7 +116,11 @@ module Planner {
         return worldState;
     }
 
-    /** The heuristics function used in the aStarSearch algorithm. */
+    /** 
+    * The heuristics function used in the aStarSearch algorithm. Overall it makes use
+    * the height of the stack above the object that is to be taken, the distance for the arm
+    * to travel and the distance between objects.
+    */
     function heuristics(state : State) : number {
         var endResult : number = Infinity;
         var result : number = 0;
@@ -313,7 +317,7 @@ module Planner {
     function isGoal(state : State) : boolean {
         var res = interpretation.some(function (interp) {
             return interp.every(function (literal) {
-
+                // A world state to be used in the exported interpreter functions
                 var worldState : WorldState = clone(initialWorld);
                 worldState.arm = state.arm;
                 worldState.stacks = state.stacks;
@@ -351,6 +355,7 @@ module Planner {
         /** Computes the edges that leave from a state. */
         outgoingEdges(state : State) : Edge<State>[] {
             var edges : Edge<State>[] = [];
+            // Four different actions: left, right, pick or drop.
             ["l", "r", "p", "d"].forEach((action) => {
                 var nextState : State = getNextState(action, state);
                 if(nextState != null){
@@ -379,6 +384,7 @@ module Planner {
         }
     }
 
+    /** Only gives back a non-null state if the action is at all possible to perform. */
     function getNextState(action : string, state : State) : State {
         var newState = clone(state);
         
