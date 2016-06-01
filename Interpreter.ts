@@ -214,7 +214,7 @@ module Interpreter {
                 break;
             case "where":
             case "exist":
-                // Handles the cases of where and exists, questions from the user
+                // Handles the cases of where and exists - questions from the user
                 var result : string = "";
                 if(ents.length > 1 && cmd.command == "exists"){
                     alert("Yes, several objects fitting the description exists");

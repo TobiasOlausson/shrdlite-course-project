@@ -108,14 +108,15 @@ module Planner {
     }
 
     function getWorldState(state : State) : WorldState{
-            var worldState : WorldState = clone(initialWorld);
-            worldState.arm = state.arm;
-            worldState.stacks = state.stacks;
-            worldState.holding = state.holding;
-            worldState.objects = objects;
-            return worldState;
-        }
+        var worldState : WorldState = clone(initialWorld);
+        worldState.arm = state.arm;
+        worldState.stacks = state.stacks;
+        worldState.holding = state.holding;
+        worldState.objects = objects;
+        return worldState;
+    }
 
+    /** The heuristics function used in the aStarSearch algorithm. */
     function heuristics(state : State) : number {
         var endResult : number = Infinity;
         var result : number = 0;
@@ -123,7 +124,7 @@ module Planner {
         var armDist : number = 0;
         interpretation.forEach((conj) => {
             conj.forEach((literal) =>{
-
+                // check for goal, provides massive speed-up if checked here aswell
                 if(isGoal(state)){
                     result = 0;
                     return;
@@ -206,7 +207,7 @@ module Planner {
 
                     case "between":
                         var dist1 : number = distBetween(literal.args[0], literal.args[1], state) - 1;
-                        var dist2 : number = distBetween(literal.args[0], literal.args[1], state) - 1;
+                        var dist2 : number = distBetween(literal.args[0], literal.args[2], state) - 1;
                         numAbove = objectsAbove(literal.args[0], state);
                         armDist = armDistance(literal.args[0], state);
 
@@ -308,6 +309,7 @@ module Planner {
 
     }
 
+    /** Function used in the aStarSearch to determine if a state is a goal. */
     function isGoal(state : State) : boolean {
         var res = interpretation.some(function (interp) {
             return interp.every(function (literal) {
@@ -413,9 +415,8 @@ module Planner {
                     if(length > 0){
                         var below : string = newState.stacks[x][y];
                         var ontop : string = newState.holding;
-                        // var belowObject : Parser.Object = objects[below];
-                        // var ontopObject : Parser.Object = objects[newState.holding];
 
+                        // special case for drop if the relation is ontop or inside
                         if(Interpreter.constraints(ontop, below, "ontop", getWorldState(state))
                             || Interpreter.constraints(ontop, below, "inside", getWorldState(state))){
                             newState.stacks[x].push(newState.holding);
