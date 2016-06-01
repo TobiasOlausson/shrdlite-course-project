@@ -228,7 +228,7 @@ module Interpreter {
                     alert(result);
                 } else if (cmd.command == "where"){
                     var pos = getIndex(ents[0], state);
-                    if(index != null){
+                    if(pos != null){
                         var obj : ObjectDefinition = getWorldObject(ents[0], state);
                         var objDescr : string = ("A " + obj.size + " " + obj.color + " " + obj.form);
                         result = (objDescr + " is located in column " + pos.x + ", at height " + pos.y + ".");
