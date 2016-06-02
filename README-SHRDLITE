@@ -13,10 +13,10 @@ Contains heuristics, goal and neighbour functions used by the A* search algorith
 Extensions:
 
 Additional relations: 
-"between" used for example in the small world by typing "put the white ball between the blue table and the blue box". Additional constraints and relation checks are implemented that can support three objects. There is the possibility to add more relations which involve two or three objects.
+"between" can be used for example in the small world by typing "put the white ball between the blue table and the blue box". Additional constraints and relation checks are implemented that can support three objects. There is the possibility to add more relations which involve two or three objects. The relations and constraints are defined in a new seperate functions with the name "triple" in them. These functions are almost identical to the ones used for the relations involving just two objects.
 
 User questions: 
-"where is a blue ball?" returns the location of a blue ball. Existance question "is there a blue ball?" returns yes if a blue ball exists in the world. These sentence structures are located in the grammar, the interpreter finds the objects and the result is shown as an alert (followed by an interpretation error).
+Added two user questions. One of them allows the user to ask where an object is located in the world. The other results in a simple yes or no answer, depending on if an object matching a description exists in the world. "where is a blue ball?" returns the location of a blue ball. Existance question "is there a blue ball?" returns yes if a blue ball exists in the world. These sentence structures are located in the grammar, the interpreter finds the objects, or doesn't, and the result is shown as an alert (followed by an interpretation error).
 
 Clarification questions:
 The clarification questions work by showing a list of all possible interpretations, letting the users choose which one to carry out. First, if there are several parses, a clarification question is asked to determine which one to interpret, eg. if the user meant "the ball that is in a box" or just "the ball", when asking "put the ball in a box on the floor". Secondly, during the interpretation, if there are several objects which may fulfill the selected parse, a question is asked to determine which of the objects in the world the user meant. The implementation uses standard Javascript prompts to ask the clarification questions.
