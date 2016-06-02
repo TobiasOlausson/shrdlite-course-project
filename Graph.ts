@@ -238,7 +238,7 @@ class aStar<Node> {
 
         // Continue improving the path until we 1) run out of time, 2) have an optimal solution (-0.0001 is to 
         // correct rounding errors) or 3) don't have any more nodes to explore.
-        while ((Date.now() < timeoutTime) && (!this.queue.isEmpty())) {
+        while (Date.now() < timeoutTime) {
 
             // Find the lowest calculated cost in the open and inconsistent set. Has to be lower than
             // the result so far.
@@ -260,7 +260,7 @@ class aStar<Node> {
 
             if (currEpsilon - 0.0001 < 1) {
                 console.log("Current result is optimal");
-                console.log("All results: " + results);
+                console.log("All found solution costs: " + results);
                 return result;
             }
 
@@ -291,6 +291,9 @@ class aStar<Node> {
             results.push(result.cost);
         }
         // Return non-optimal (if currEpsilon was never 1, or timeout) or empty result
+        console.log("Timeout occured. Returning last found solution.");
+        console.log("Optimal solution has to cost at least " + result.cost / currEpsilon + ".");
+        console.log("All found solution costs: " + results);
         return result;
     }
     private improvePath(): SearchResult<Node>{
@@ -356,10 +359,11 @@ class aStar<Node> {
                 }
             }
         }
-        console.log("Queue empty; returning previous result");
         if (this.goalState === undefined) {
+            console.log("Queue empty; no path found!");
             return new SearchResult<Node>();
         } else {
+            console.log("Queue empty; returning previous result!");
             return this.calculatePath(this.goalState)
         }
     }
