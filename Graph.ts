@@ -38,16 +38,8 @@ class QueueNode<Node> {
 }
 
 
-/**
-* An implementation of the A* search algorithm using a priority queue.
-* @param graph The graph on which to perform A\* search.
-* @param start The initial node.
-* @param goal A function that returns true when given a goal node. Used to determine if the algorithm has reached the goal.
-* @param heuristics The heuristic function. Used to estimate the cost of reaching the goal from a given Node.
-* @param timeout Maximum time (in seconds) to spend performing A\* search.
-* @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
-*/
 
+/* Regular aStar not used, but left in the code to be able to be inspected */
 function aStarSearchOriginal<Node>(graph: Graph<Node>,
     start: Node,
     goal: (n: Node) => boolean,
@@ -160,6 +152,16 @@ function aStarSearchOriginal<Node>(graph: Graph<Node>,
     return result;
 }
 
+/**
+* An implementation of the A* search algorithm using a priority queue.
+* @param graph The graph on which to perform A\* search.
+* @param start The initial node.
+* @param goal A function that returns true when given a goal node. Used to determine if the algorithm has reached the goal.
+* @param heuristics The heuristic function. Used to estimate the cost of reaching the goal from a given Node.
+* @param timeout Maximum time (in seconds) to spend performing A\* search.
+* @returns A search result, which contains the path from `start` to a node satisfying `goal` and the cost of this path.
+*/
+
 function aStarSearch<Node>(graph: Graph<Node>,
     start: Node,
     goal: (n: Node) => boolean,
@@ -182,7 +184,7 @@ class aStar<Node> {
     // Priority queue for keeping track of paths to the nodes in the graph
     private queue: collections.PriorityQueue<QueueNode<Node>>;
 
-    // Initial value for epsilon
+    // Initial value for epsilon. Chosen by empirical testing in shrdlite
     private epsilon: number = 4;
 
     // Known goal state with lowest path to it
