@@ -28,8 +28,6 @@ module Planner {
             try {
                 var result : PlannerResult = <PlannerResult>interpretation;
                 result.plan = planInterpretation(result.interpretation, currentState);
-                // result.plan.push("new interpretation");
-                // result.plan.push(toString(result.interpretation));
 
                 if (result.plan.length == 0) {
                     result.plan.push("That is already true!");
@@ -84,7 +82,7 @@ module Planner {
         interpretation = interpret;
 
         var startState : State = new State(cloneState.stacks, cloneState.holding, cloneState.arm, null);
-
+        
         var path = aStarSearch(new StateGraph(), startState, isGoal, heuristics, timeout);
         path.path.forEach((s) => {
             if(s.action != null)
@@ -109,14 +107,19 @@ module Planner {
     }
 
     function getWorldState(state : State) : WorldState{
-            var worldState : WorldState = clone(initialWorld);
-            worldState.arm = state.arm;
-            worldState.stacks = state.stacks;
-            worldState.holding = state.holding;
-            worldState.objects = objects;
-            return worldState;
-        }
+        var worldState : WorldState = clone(initialWorld);
+        worldState.arm = state.arm;
+        worldState.stacks = state.stacks;
+        worldState.holding = state.holding;
+        worldState.objects = objects;
+        return worldState;
+    }
 
+    /** 
+    * The heuristics function used in the aStarSearch algorithm. Overall it makes use
+    * the height of the stack above the object that is to be taken, the distance for the arm
+    * to travel and the distance between objects.
+    */
     function heuristics(state : State) : number {
         var endResult : number = Infinity;
         var result : number = 0;
@@ -124,7 +127,7 @@ module Planner {
         var armDist : number = 0;
         interpretation.forEach((conj) => {
             conj.forEach((literal) =>{
-
+                // check for goal, provides massive speed-up if checked here aswell
                 if(isGoal(state)){
                     result = 0;
                     return;
@@ -205,6 +208,14 @@ module Planner {
                         result = numAbove*4 + dist + armDist;
                         return;
 
+                    case "between":
+                        var dist1 : number = distBetween(literal.args[0], literal.args[1], state) - 1;
+                        var dist2 : number = distBetween(literal.args[0], literal.args[2], state) - 1;
+                        numAbove = objectsAbove(literal.args[0], state);
+                        armDist = armDistance(literal.args[0], state);
+
+                        result = numAbove*4 + dist1 + dist2 + armDist;
+                        return;
                     default: 
                         result = 0;
                         return;
@@ -301,10 +312,17 @@ module Planner {
 
     }
 
+    /** Function used in the aStarSearch to determine if a state is a goal. */
     function isGoal(state : State) : boolean {
         var res = interpretation.some(function (interp) {
             return interp.every(function (literal) {
-                switch(literal.relation){
+                // A world state to be used in the exported interpreter functions
+                var worldState : WorldState = clone(initialWorld);
+                worldState.arm = state.arm;
+                worldState.stacks = state.stacks;
+                worldState.holding = state.holding;
+                worldState.objects = objects;
+                switch(literal.relation){   
                     case "holding":
                         return (literal.args[0] == state.holding);
                     case "inside":
@@ -312,16 +330,14 @@ module Planner {
                     case "beside":
                     case "leftof":
                     case "rightof":
+                    case "under":
                     case "ontop":
                     case "under":
-                        var worldState : WorldState = clone(initialWorld);
-                        worldState.arm = state.arm;
-                        worldState.stacks = state.stacks;
-                        worldState.holding = state.holding;
-                        worldState.objects = objects;
-
                         return Interpreter.relationCheck(literal.args[0], 
                             literal.args[1], literal.relation, worldState);
+                    case "between":
+                        return Interpreter.relationCheckTriple(literal.args[0], 
+                            literal.args[1], literal.args[2], literal.relation, worldState);
                     default:
                         return false;
                 }
@@ -338,6 +354,7 @@ module Planner {
         /** Computes the edges that leave from a state. */
         outgoingEdges(state : State) : Edge<State>[] {
             var edges : Edge<State>[] = [];
+            // Four different actions: left, right, pick or drop.
             ["l", "r", "p", "d"].forEach((action) => {
                 var nextState : State = getNextState(action, state);
                 if(nextState != null){
@@ -366,6 +383,7 @@ module Planner {
         }
     }
 
+    /** Only gives back a non-null state if the action is at all possible to perform. */
     function getNextState(action : string, state : State) : State {
         var newState : State = clone(state);
         
@@ -402,9 +420,8 @@ module Planner {
                     if(length > 0){
                         var below : string = newState.stacks[x][y];
                         var ontop : string = newState.holding;
-                        // var belowObject : Parser.Object = objects[below];
-                        // var ontopObject : Parser.Object = objects[newState.holding];
 
+                        // special case for drop if the relation is ontop or inside
                         if(Interpreter.constraints(ontop, below, "ontop", getWorldState(state))
                             || Interpreter.constraints(ontop, below, "inside", getWorldState(state))){
                             newState.stacks[x].push(newState.holding);

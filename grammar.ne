@@ -40,11 +40,17 @@ main --> will_you:? please:? command please:?  {% R(2) %}
 command --> take entity           {% R({command:"take", entity:1}) %}
 command --> move  it    location  {% R({command:"put", location:2}) %}
 command --> move entity location  {% R({command:"move", entity:1, location:2}) %}
+command --> where_is entity  {% R({command:"where", entity:1}) %}
+command --> is_there entity  {% R({command:"exist", entity:1}) %}
 
 location --> relation entity  {% R({relation:0, entity:1}) %}
+location --> between entity and entity2  {% R({relation:0, entity:1, entity2:3}) %}
 
 entity --> quantifierSG objectSG  {% R({quantifier:0, object:1}) %}
 entity --> quantifierPL objectPL  {% R({quantifier:0, object:1}) %}
+
+entity2 --> quantifierSG objectSG  {% R({quantifier:0, object:1}) %}
+entity2 --> quantifierPL objectPL  {% R({quantifier:0, object:1}) %}
 
 objectSG --> objectSG that_is:?  location  {% R({object:0, location:2}) %}
 objectPL --> objectPL that_are:? location  {% R({object:0, location:2}) %}
@@ -67,6 +73,8 @@ relation --> ("on" | "on" "top" "of")    {% R("ontop") %}
 relation --> ("under" | "below")         {% R("under") %}
 relation --> ("beside")                  {% R("beside") %}
 relation --> ("above")                   {% R("above") %}
+
+between --> ("between")                  {% R("between") %}
 
 size --> ("small" | "tiny")  {% R("small") %}
 size --> ("large" | "big")   {% R("large") %}
@@ -105,3 +113,8 @@ that_are --> "that" "are"
 will_you --> ("will" | "can" | "could") "you"
 
 please --> "please"
+
+and --> "and"
+where_is --> "where" "is"
+
+is_there --> "is" "there"
