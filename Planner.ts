@@ -102,11 +102,11 @@ module Planner {
             public action :string
         ) { }
 
-        // Enables the use of hashmaps in aStarSearch /André
-        public toString = (): string => {
-            return (this.stacks + this.holding + this.arm + this.action);
+        // Enables the use of fast string matching in aStarSearch /André
+        public toString() {
+            console.log("stacks: " + this.stacks + ", holding: " + this.holding + ", arm: " + this.arm + ", action: " + this.action);
+            return ("stacks: " + this.stacks + ", holding: " + this.holding + ", arm: " + this.arm + ", action: " + this.action);
         }
-
     }
 
     function getWorldState(state : State) : WorldState{
@@ -368,7 +368,7 @@ module Planner {
     }
 
     function getNextState(action : string, state : State) : State {
-        var newState = clone(state);
+        var newState : State = clone(state);
         
         switch(action){
             case "l":
@@ -411,14 +411,14 @@ module Planner {
                             newState.stacks[x].push(newState.holding);
                             newState.holding = null;
                             newState.action = action;
-                            return newState;
+                            return new State(newState.stacks, newState.holding, newState.arm, newState.action);
                         }
                     } else {
                         newState.stacks[x].push(newState.holding);
                         newState.holding = null;
                         newState.action = action;
 
-                        return newState;
+                        return new State(newState.stacks, newState.holding, newState.arm, newState.action);
                     }
 
 

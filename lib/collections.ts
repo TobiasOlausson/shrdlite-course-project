@@ -1585,6 +1585,10 @@ module collections {
             this.data.length = 0;
         }
 
+        toArray(): T[] {
+            return this.data;
+        }
+
         /**
          * Executes the provided function once for each element present in this heap in 
          * no particular order.
@@ -1865,6 +1869,11 @@ module collections {
          */
         enqueue(element: T): boolean {
             return this.heap.add(element);
+        }
+
+        // Custom toArray function as used in ARA*
+        toArray(): T[] {
+            return this.heap.toArray();
         }
 
         /**
