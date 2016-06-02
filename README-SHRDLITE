@@ -1,7 +1,7 @@
 Files:
 
 Graph.ts: 
-An implementation of the A* search algorithm. 
+An implementation of the A* search algorithm, under the name aStarOriginal (which is not used by default). Also an implementation of Anytime Repairing A*, which is the algorithm used by default. See more under extensions. 
 
 Interpreter.ts: 
 An interpreter which recursively goes through the parse and returns all interpretations which match the given parse result. Relations and constraints for each object/relation are also defined here and used in the recursive definition.
