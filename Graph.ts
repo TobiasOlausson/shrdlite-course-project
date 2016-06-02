@@ -1,6 +1,4 @@
 /// <reference path="lib/collections.ts"/>
-/// <reference path="lib/node.d.ts"/>
-/// <reference path="lib/heap.d.ts"/>
 
 /** Graph module
 *
@@ -33,10 +31,6 @@ class SearchResult<Node> {
 /** Type stored in the priority queue. Keeps track of its parent
     in order to reconstruct the path. */
 class QueueNode<Node> {
-    public toString(): string {
-        return "poop";
-    }
-
     parent: QueueNode<Node>;
     node: Node;
     cost: number;
@@ -171,150 +165,206 @@ function aStarSearch<Node>(graph: Graph<Node>,
     goal: (n: Node) => boolean,
     heuristics: (n: Node) => number,
     timeout: number): SearchResult<Node> {
-    return aStar.anytimeAStarRepairing(graph, start, goal, heuristics, timeout);
+    var astar: aStar<Node> = new aStar<Node>(graph, start, goal, heuristics, timeout);
+    return astar.anytimeAStarRepairing(timeout);
 }
 
-module aStar {
-    var graph: Graph<Node>;
-    var start: Node;
-    var goal: (n: Node) => boolean;
-    var heuristics: (n: Node) => number;
+class aStar<Node> {
+    private graph: Graph<Node>;
+    private start: Node;
+    private goal: (n: Node) => boolean;
+    private heuristics: (n: Node) => number;
 
     // Keep track of nodes that have been visited globally
-    var visitedSet: { [node: string]: QueueNode<Node>; } = {};
-    var inconsistentSet: { [node: string]: QueueNode<Node>; } = {};
+    private visitedSet: { [node: string]: QueueNode<Node>; } = {};
+    private inconsistentSet: { [node: string]: QueueNode<Node>; } = {};
 
     // Priority queue for keeping track of paths to the nodes in the graph
-    var queue: collections.PriorityQueue<QueueNode<Node>>;
+    private queue: collections.PriorityQueue<QueueNode<Node>>;
 
     // Initial value for epsilon
-    var epsilon: number = 4;
+    private epsilon: number = 4;
 
-    // Comparator for priority queue
-    function nodeComparator<Node>(node1: QueueNode<Node>, node2: QueueNode<Node>){
-        return (node2.cost + epsilon * node2.heuristic - node1.cost + epsilon * node1.heuristic);
-    };
-    
-    export function anytimeAStarRepairing<Node>(graph: Graph<Node>,
+    // Known goal state with lowest path to it
+    private goalState: QueueNode<Node>;
+
+    constructor(
+        graph: Graph<Node>,
         start: Node,
         goal: (n: Node) => boolean,
         heuristics: (n: Node) => number,
-        timeout: number): SearchResult<Node> {
+        timeout: number) {
 
-        console.log("aStarSearch med hash");
-
-        // Staring factor to heuristic function
-        var currEpsilon: number;
-
+        this.graph = graph;
+        this.start = start;
+        this.goal = goal;
+        this.heuristics = heuristics;
+    }
+    
+    public anytimeAStarRepairing(timeout: number): SearchResult<Node> {
         // Used to check for timeout
-        var timeoutTime: number = Date.now() + timeout * 1000;
+        var timeoutTime: number = Date.now() + timeout;
 
-        queue = new collections.PriorityQueue<QueueNode<Node>>(nodeComparator);
+        function nodeComparator(node1: QueueNode<Node>, node2: QueueNode<Node>) {
+            return ((node2.cost + node2.heuristic) - (node1.cost + node1.heuristic));
+        };
+
+        this.queue = new collections.PriorityQueue<QueueNode<Node>>(nodeComparator);
 
         // Initial queue edges
         var startNode: QueueNode<Node> = {
             parent: undefined,
-            node: start,
+            node: this.start,
             cost: 0,
-            heuristic: heuristics(start)
+            heuristic: this.epsilon * this.heuristics(this.start) //this this this
         };
-        queue.add(startNode);
-        console.log("startNode: " + startNode.toString());
-        console.log("startNode.node: " + startNode.node.toString());
-
+        this.queue.add(startNode);
+        
+        // Keep track of current search result
         var result: SearchResult<Node>;
 
-        result = improvePath();
+        // Calculate a path
+        result = this.improvePath();
 
-        console.log("Got result! " + result.cost);
-        return result;
+        // Keep track of historical costs; not needed for algorithm; only used to see
+        // how the algorithm improves the path
+        var results: number[] = [result.cost];
 
-        /*currEpsilon = Math.min(epsilon, result.cost);
-    
-        // Iteration
-        while ((Date.now() < timeoutTime) && (!queue.isEmpty())) {
-            var inconsistentSet: { [node: string]: QueueNode<Node> };
+        // Create a new queue for open nodes (since collections.PriorityQueue do not have a method
+        // for resorting a queue when an element is changed.
+        // Note that the comparator is the same since it uses the precomputed value for the
+        // heuristic function as stored in the QueueNodes.
+        var iterQueue: collections.PriorityQueue<QueueNode<Node>>;
+
+        // Continue improving the path until we 1) run out of time, 2) have an optimal solution (-0.0001 is to 
+        // correct rounding errors) or 3) don't have any more nodes to explore.
+        while ((Date.now() < timeoutTime) && (!this.queue.isEmpty())) {
+
+            // Find the lowest calculated cost in the open and inconsistent set. Has to be lower than
+            // the result so far.
+            var minCost: number = result.cost;
+
+            var queueArray: QueueNode<Node>[] = this.queue.toArray();
+            for (var node of queueArray) {
+                minCost = Math.min(minCost, node.cost + node.heuristic / this.epsilon);
+            }
+            for (var key in this.inconsistentSet) {
+                // This is O(1) under optimal conditions, so no added time complexity)
+                var node: QueueNode<Node> = this.inconsistentSet[key];
+                minCost = Math.min(minCost, node.cost + node.heuristic / this.epsilon);
+                queueArray.push(node);
+            }
+
+            // Calculate how good the solution is currently
+            var currEpsilon: number = Math.min(this.epsilon, result.cost / minCost);
+
+            if (currEpsilon - 0.0001 < 1) {
+                console.log("Current result is optimal");
+                console.log("All results: " + results);
+                return result;
+            }
+
+            var oldEpsilon = this.epsilon;
+            this.epsilon = Math.max(1, this.epsilon - 1);
+            var epsilonDiv = this.epsilon / oldEpsilon;
+
+            // Replace the old queue with the new one, including inconsistent nodes and with updated
+            // heuristic values.
+            iterQueue = new collections.PriorityQueue<QueueNode<Node>>(nodeComparator);
+            
+            // Update the old queue and inconsistent set with new heuristics, and add them to the new queue
+            // to get them in the right order. With an updateable queue this could have been done more 
+            // efficiently with a .heapify() function or similar after updating the old queue. That way
+            // we would not have to had go through all nodes twice; one to calculate minCost and once to 
+            // add to the new queue.
+            queueArray.concat(queueArray);
+            for (node of queueArray) {
+                node.heuristic = node.heuristic * epsilonDiv;
+                iterQueue.enqueue(node);
+            }
+            this.queue = iterQueue;
+            // Since all inconsistent nodes have been added to the new queue, clear the inconsistent set
+            this.inconsistentSet = {};
+
+            // Improve the path and save the result
+            result = this.improvePath();
+            results.push(result.cost);
         }
-        // Return empty result*/
+        // Return non-optimal (if currEpsilon was never 1, or timeout) or empty result
+        return result;
     }
-    function improvePath<Node>() {
+    private improvePath(): SearchResult<Node>{
 
-        console.log("Entering improvePath");
         // Used to store nodes to which the shortest path has already been found
-        // Hashmap for O(1) retrieval
         var closedSet: { [node: string]: QueueNode<Node>; } = {};
-        while (!queue.isEmpty()) {
+
+        while (!this.queue.isEmpty()) {
             // First element in priority queue
-            var current: QueueNode<Node> = queue.dequeue();
+            var current: QueueNode<Node> = this.queue.dequeue();
             closedSet[current.node.toString()] = current;
-            console.log("Closed set: " + Object.keys(closedSet).length);
-            console.log("Visited set: " + Object.keys(visitedSet).length);
-            console.log("Inconsistent set: " + Object.keys(inconsistentSet).length);
+
             // Goal found, reconstruct path
-            if (goal(current.node)) {
-                return calculatePath(current);
+            if (this.goal(current.node)) {
+                if ((this.goalState === undefined) || (this.goalState.cost > current.cost)) {
+                    this.goalState = current;
+                }
+                return this.calculatePath(this.goalState);
             }
             //Add neighbouring edges to queue
-            var adjEdges: Edge<Node>[] = graph.outgoingEdges(current.node);
+            var adjEdges: Edge<Node>[] = this.graph.outgoingEdges(current.node);
             for (var edge of adjEdges) {
                 // Neater code with these predefined
                 var targetNode: Node = edge.to;
                 var targetQueueNode: QueueNode<Node>;
                 var shorterPathExists: boolean = false;
                 var accumCost: number = edge.cost + current.cost;
-                console.log("TargetNode: " + targetNode.toString());
-                console.log(targetNode.toString());
 
                 // It could be costly to calculate heuristics, so only do it once
-                var currHeur = heuristics(targetNode);
-
+                var currHeur = this.heuristics(targetNode)*this.epsilon;
                 // Has targetNode been visited before?
-                targetQueueNode = visitedSet[targetNode.toString()];
+                targetQueueNode = this.visitedSet[targetNode.toString()];
                 if (!(targetQueueNode === undefined)) {
-                    console.log("targetQueueNode not undefined");
+
                     // Have we found a faster path than is already known?
                     if (targetQueueNode.cost > accumCost) {
-                        console.log("Cost not higher");
                         targetQueueNode.parent = current;
                         targetQueueNode.cost = accumCost;
                         targetQueueNode.heuristic = currHeur;
 
                         // Is the node not closed?
                         if (closedSet[targetNode.toString()] === undefined) {
-                            console.log("targetNode not in closed set");
                             // If not in the closed set, and has been visited, 
                             // it has to be in the queue, so update it. We already
                             // know that the currently found path is faster.
-                            queue.enqueue(targetQueueNode);
+                            this.queue.enqueue(targetQueueNode);
                         } else {
                             // If it has been visited, but is in the closed set, 
                             // we insert it into the inconsistent set. 
-                            console.log("targetNode added to inconsistent");
-                            inconsistentSet[targetNode.toString()] = targetQueueNode;
+                            this.inconsistentSet[targetNode.toString()] = targetQueueNode;
                         }
                     }
                 } else {
-                    console.log("targetNode undefined");
+                    // If we have not visited the node, add it to the queue
                     var newNode: QueueNode<Node> = {
                         parent: current,
                         node: targetNode,
                         cost: accumCost,
                         heuristic: currHeur
                     };
-                    queue.add(newNode);
-                    visitedSet[targetNode.toString()] = newNode;
-                    console.log("set targetNode to visited");
-                    console.log("targetNode: " + targetNode.toString());
-                    console.log("newNode: " + newNode.toString());
-                    console.log("newNode.node: " + newNode.node.toString());
-                    console.log("visitedSet: " + visitedSet);
+                    this.queue.add(newNode);
+                    this.visitedSet[targetNode.toString()] = newNode;
                 }
             }
         }
-        return new SearchResult<Node>();
+        console.log("Queue empty; returning previous result");
+        if (this.goalState === undefined) {
+            return new SearchResult<Node>();
+        } else {
+            return this.calculatePath(this.goalState)
+        }
     }
 
-    function calculatePath<Node>(goal: QueueNode<Node>): SearchResult<Node> {
+    private calculatePath<Node>(goal: QueueNode<Node>): SearchResult<Node> {
         var prev: QueueNode<Node> = goal;
 
         // Initiate the result to an empty path and zero cost
@@ -328,6 +378,7 @@ module aStar {
         }
         // Saves about 0.0000000000000001 s over using unshift. 
         result.path.reverse();
+        //console.log("Path calculated");
         return result;
     }
 }
