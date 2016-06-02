@@ -230,6 +230,9 @@ class aStar<Node> {
         // how the algorithm improves the path
         var results: number[] = [result.cost];
 
+        // Keep track of how good the current solution is
+        var currEpsilon: number = this.epsilon;
+
         // Create a new queue for open nodes (since collections.PriorityQueue do not have a method
         // for resorting a queue when an element is changed.
         // Note that the comparator is the same since it uses the precomputed value for the
@@ -255,11 +258,18 @@ class aStar<Node> {
                 queueArray.push(node);
             }
 
-            // Calculate how good the solution is currently
-            var currEpsilon: number = Math.min(this.epsilon, result.cost / minCost);
+            // Calculate the bound for the current solution. If the start is at the solution
+            // result.cost will be zero, and the empty path will be returned
+            if (minCost > 0) {
+                currEpsilon = Math.min(this.epsilon, result.cost / minCost);
+            } else {
+                currEpsilon = this.epsilon;
+            }
 
-            if (currEpsilon - 0.0001 < 1) {
-                console.log("Current result is optimal");
+            // The subtraction is to account for rounding errors in the calculation
+            // of currEpsilon
+            if ((currEpsilon - 0.0001 < 1) || (result.cost == 0)) {
+                console.log("Current found solution is optimal!");
                 console.log("All found solution costs: " + results);
                 return result;
             }
