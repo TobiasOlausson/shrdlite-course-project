@@ -104,7 +104,6 @@ module Planner {
 
         // Enables the use of fast string matching in aStarSearch /André
         public toString() {
-            console.log("stacks: " + this.stacks + ", holding: " + this.holding + ", arm: " + this.arm + ", action: " + this.action);
             return ("stacks: " + this.stacks + ", holding: " + this.holding + ", arm: " + this.arm + ", action: " + this.action);
         }
     }
