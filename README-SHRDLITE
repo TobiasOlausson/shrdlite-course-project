@@ -9,6 +9,9 @@ An interpreter which recursively goes through the parse and returns all interpre
 Planner.ts: 
 Contains heuristics, goal and neighbour functions used by the A* search algorithm. The state and state graph are also defined here. Returns a plan which is derived from an interpretation.
 
+lib/collections.ts:
+This file has been extended by adding a toArray() function to both the Heap and the PriorityQueue (which in turn calls the Heap version). This is used to make ARA* more efficient.
+
 
 Extensions:
 
