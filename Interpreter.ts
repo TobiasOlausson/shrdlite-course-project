@@ -585,7 +585,7 @@ module Interpreter {
     }
 
     function stringifyParseLocation(loc : Parser.Location) : string {
-	return loc.relation + " " + loc.entity.quantifier + " " +
+	return "that is " + loc.relation + " " + loc.entity.quantifier + " " +
 	    stringifyParseObject(loc.entity, loc.entity.object);
     }
     
