@@ -171,6 +171,8 @@ function aStarSearch<Node>(graph: Graph<Node>,
     return astar.anytimeAStarRepairing(timeout);
 }
 
+// The search function is encapsulated in a class to keep track of internal queues and sets without having to 
+// pass them between all functions.
 class aStar<Node> {
     private graph: Graph<Node>;
     private start: Node;
@@ -190,6 +192,7 @@ class aStar<Node> {
     // Known goal state with lowest path to it
     private goalState: QueueNode<Node>;
 
+    // Initiate the class with the supplied parameters
     constructor(
         graph: Graph<Node>,
         start: Node,
@@ -202,16 +205,20 @@ class aStar<Node> {
         this.goal = goal;
         this.heuristics = heuristics;
     }
-    
+
+    // Search for a path to the goal state by iterating over decreasing values of 
+    // epsilon
     public anytimeAStarRepairing(timeout: number): SearchResult<Node> {
+
         // Used to check for timeout
         var timeoutTime: number = Date.now() + timeout;
 
+        // Comparator for nodes in the queue. The heuristic value is static
+        // so it does not have to be calculated when comparing; only when creating
+        // a new node.
         function nodeComparator(node1: QueueNode<Node>, node2: QueueNode<Node>) {
             return ((node2.cost + node2.heuristic) - (node1.cost + node1.heuristic));
         };
-
-        this.queue = new collections.PriorityQueue<QueueNode<Node>>(nodeComparator);
 
         // Initial queue edges
         var startNode: QueueNode<Node> = {
@@ -220,6 +227,7 @@ class aStar<Node> {
             cost: 0,
             heuristic: this.epsilon * this.heuristics(this.start) //this this this
         };
+        this.queue = new collections.PriorityQueue<QueueNode<Node>>(nodeComparator);
         this.queue.add(startNode);
         
         // Keep track of current search result
@@ -248,7 +256,7 @@ class aStar<Node> {
             // Find the lowest calculated cost in the open and inconsistent set. Has to be lower than
             // the result so far.
             var minCost: number = result.cost;
-
+            // Save the array since we will be needing it if we have to iterate
             var queueArray: QueueNode<Node>[] = this.queue.toArray();
             for (var node of queueArray) {
                 minCost = Math.min(minCost, node.cost + node.heuristic / this.epsilon);
@@ -257,6 +265,9 @@ class aStar<Node> {
                 // This is O(1) under optimal conditions, so no added time complexity)
                 var node: QueueNode<Node> = this.inconsistentSet[key];
                 minCost = Math.min(minCost, node.cost + node.heuristic / this.epsilon);
+                // Add to the array while we're looking through the set. If we don't
+                // iterate, this will be a small waste of time, but if we DO iterate
+                // we don't have to look through inconstentSet twice.
                 queueArray.push(node);
             }
 
@@ -313,19 +324,27 @@ class aStar<Node> {
         // Used to store nodes to which the shortest path has already been found
         var closedSet: { [node: string]: QueueNode<Node>; } = {};
 
+        // During an iteration, the goal state may be far from any of the states that we
+        // look at. Thus, we have to stop when all open states have been recalculated; not
+        // when a goal state is visited.
         while (!this.queue.isEmpty()) {
-            // First element in priority queue
             var current: QueueNode<Node> = this.queue.dequeue();
+            // The hashmap is keyed on the string representation of a node, and points to
+            // the QueueNode with the currently shortest path known. Since each node
+            // is unique, but can have several paths pointing to it, this makes it so that
+            // we can efficiently overwrite a known path if we find a faster one.
             closedSet[current.node.toString()] = current;
 
             // Goal found, reconstruct path
             if (this.goal(current.node)) {
+                // If no goal had been found earlier, or the old goal had a longer path, 
+                // we save the new one.
                 if ((this.goalState === undefined) || (this.goalState.cost > current.cost)) {
                     this.goalState = current;
                 }
                 return this.calculatePath(this.goalState);
             }
-            //Add neighbouring edges to queue
+            // Add neighbouring edges to queue
             var adjEdges: Edge<Node>[] = this.graph.outgoingEdges(current.node);
             for (var edge of adjEdges) {
                 // Neater code with these predefined
@@ -335,12 +354,13 @@ class aStar<Node> {
                 var accumCost: number = edge.cost + current.cost;
 
                 // It could be costly to calculate heuristics, so only do it once
-                var currHeur = this.heuristics(targetNode)*this.epsilon;
+                var currHeur = this.heuristics(targetNode) * this.epsilon;
+
                 // Has targetNode been visited before?
                 targetQueueNode = this.visitedSet[targetNode.toString()];
                 if (!(targetQueueNode === undefined)) {
 
-                    // Have we found a faster path than is already known?
+                    // Have we found a faster path than what is already known?
                     if (targetQueueNode.cost > accumCost) {
                         targetQueueNode.parent = current;
                         targetQueueNode.cost = accumCost;
@@ -371,23 +391,28 @@ class aStar<Node> {
                 }
             }
         }
+        // If the queue is empty, and no path had been found earlier, we're stuck!
         if (this.goalState === undefined) {
             console.log("Queue empty; no path found!");
             return new SearchResult<Node>();
         } else {
+            // If a path had been found to the goal earlier, we still return it. The path
+            // might still be shorter even if the goal state itself was not changed, since
+            // earlier nodes in the path could have gotten a faster path pointed at them
             console.log("Queue empty; returning previous result!");
             return this.calculatePath(this.goalState)
         }
     }
 
+    // Calculate a path backwards from a goal state
     private calculatePath<Node>(goal: QueueNode<Node>): SearchResult<Node> {
         var prev: QueueNode<Node> = goal;
 
-        // Initiate the result to an empty path and zero cost
         var result: SearchResult<Node> = { path: [], cost: 0 };
 
-        result.cost += goal.cost;
+        result.cost = goal.cost;
         result.path.push(goal.node);
+        // Follow the pointers backwards until we get to the start node
         while (prev.parent != undefined) {
             prev = prev.parent;
             result.path.push(prev.node);
