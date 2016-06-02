@@ -17,3 +17,6 @@ Additional relations:
 
 User questions: 
 "where is a blue ball?" returns the location of a blue ball. Existance question "is there a blue ball?" returns yes if a blue ball exists in the world. These sentence structures are located in the grammar, the interpreter finds the objects and the result is shown as an alert (followed by an interpretation error).
+
+Clarification questions:
+The clarification questions work by showing a list of all possible interpretations, letting the users choose which one to carry out. First, if there are several parses, a clarification question is asked to determine which one to interpret, eg. if the user meant "the ball that is in a box" or just "the ball", when asking "put the ball in a box on the floor". Secondly, during the interpretation, if there are several objects which may fulfill the selected parse, a question is asked to determine which of the objects in the world the user meant. The implementation uses standard Javascript prompts to ask the clarification questions.
