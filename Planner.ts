@@ -134,6 +134,7 @@ module Planner {
                 }
                 switch(literal.relation){
                     case "holding":
+                        // At a minimum, the arm has to move to the objects stack, remove those on top and pick the object up
                         numAbove = objectsAbove(literal.args[0], state);
                         armDist = armDistance(literal.args[0], state);
                         result = armDist + numAbove*4 + 1;
@@ -146,31 +147,42 @@ module Planner {
                         var armDist2 = armDistance(literal.args[1], state);
                         var nearest : number = 0;
 
+                        // If only one stack is cleared, move to the other one
                         if(numAbove1 == 0 && numAbove2 > 0){
                             nearest = armDist2;
                         }else if(numAbove2 == 0 && numAbove1 > 0){
                             nearest = armDist1;
                         }else if(numAbove1 == 0 && numAbove2 ==0){
+                            // If both stacks are empty, the arm must move to the one
+                            // with the object to move
                             nearest = armDist1;
                         }else{
+                            // Otherwise must at least ove to the nearest of the two
                             nearest = Math.min(armDist1, armDist2); 
                         }
 
+                        // Handles the case when both objects are in the same stack
                         if(isAbove(literal.args[0], literal.args[1], state)) {
                             numAbove2 = numAbove2 - numAbove1;
                         }else if(isAbove(literal.args[1], literal.args[0], state)) {
                             numAbove1 = numAbove1 - numAbove2;
                         }
 
+                        // The distance between the two stacks
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
 
                         result = nearest + dist + (numAbove1 + numAbove2)*3 + 2 ;
 
+                        //If the arm is holding an object, but still has to clear 
+                        // The target stack, it must be put down
                         if((numAbove2 > 0) && state.holding != null){
                             result += 1;
                         }
                         return;
                     case "under":
+                        // must clear the object above the stack with the desired object
+                        // and move to the nearest stack
+                        // and move between the stacks
                         numAbove = objectsAbove(literal.args[1], state);
 
                         var armDist1 = armDistance(literal.args[0], state);
@@ -193,7 +205,10 @@ module Planner {
                         var dist : number = distBetween(literal.args[0], literal.args[1], state);
                         var nearest : number = Math.min(armDist1, armDist2);
 
+                        // must clear the stack, move between stacks and move to the nearest stack.
                         result = numAbove*4 + dist + nearest;
+
+                        // If the object can't be put ontop the target stack, at lest one object must be cleared
                         if(!canPut){
                             result = result + 3;
                         }
@@ -202,6 +217,10 @@ module Planner {
                     case "leftof":
                     case "rightof":
                     case "beside":
+
+                        // must clear the object above the stack with the desired object
+                        // and move to the stack with the desired object
+                        // and move between the stacks
                         var dist : number = distBetween(literal.args[0], literal.args[1], state) -1;
                         numAbove = objectsAbove(literal.args[0], state);
                         armDist = armDistance(literal.args[0], state);
